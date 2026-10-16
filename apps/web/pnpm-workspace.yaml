@@ -1,0 +1,3 @@
+allowBuilds:
+  # Postinstall only picks a prebuilt binary; the optional platform package already provides it.
+  unrs-resolver: false

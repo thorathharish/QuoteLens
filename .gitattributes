@@ -1,0 +1,5 @@
+# Normalize to LF everywhere so scripts and configs behave the same in Linux containers.
+* text=auto eol=lf
+*.ico binary
+*.png binary
+*.xlsx binary

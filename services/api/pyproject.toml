@@ -1,0 +1,81 @@
+[project]
+name = "quotelens-api"
+version = "0.1.0"
+description = "QuoteLens backend: evidence-backed BOM → quotation API and job worker"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "httpx>=0.27",
+    "google-auth>=2.35",
+    "google-cloud-firestore>=2.19",
+    "google-cloud-pubsub>=2.26",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# ── Ruff ──────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF", "ASYNC", "PT", "S", "TID"]
+ignore = [
+    "S101",   # assert: tests and type narrowing only; runtime checks raise DomainError
+    "UP046",  # pydantic generic models use Generic[T]
+    "UP047",
+]
+allowed-confusables = ["×"]  # used deliberately in human-readable formulas
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "N802", "TID251"]
+"app/api/**" = ["TID251"]
+"app/main_*.py" = ["TID251"]
+"app/app_factory.py" = ["TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# Domain must stay free of I/O and frameworks (ADR-0002).
+"fastapi".msg = "Do not import FastAPI outside app/api or app entrypoints."
+
+# ── Mypy ──────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+packages = ["app"]
+
+[[tool.mypy.overrides]]
+module = ["google.cloud.*", "google.auth.*", "google.oauth2.*"]
+ignore_missing_imports = true
+
+# ── Pytest ────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "firestore: needs FIRESTORE_EMULATOR_HOST (skipped otherwise)",
+]
+addopts = "-q --strict-markers"
+
+[tool.coverage.run]
+source = ["app"]
+branch = true

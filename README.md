@@ -82,7 +82,19 @@ docs/              Design documentation
 ```
 
 ## Getting started
-Setup and deployment instructions will be added with the implementation.
+Prerequisites: Python 3.12 via [uv](https://docs.astral.sh/uv/), Node 20+, pnpm 11, and the `gcloud` CLI (for deployment only).
+
+```bash
+# Backend: runs fully offline by default (in-memory store, inline jobs)
+cd services/api && uv sync && cp .env.example .env
+uv run uvicorn app.main_api:app --reload --port 8080      # http://localhost:8080/healthz
+uv run pytest
+
+# Frontend
+cd apps/web && pnpm install && pnpm dev                    # http://localhost:3000
+```
+
+**GCP (free credits):** run `PROJECT_ID=<id> ./infra/bootstrap.sh` once. It enables the APIs and creates service accounts, Firestore, the bucket, the BigQuery datasets, Pub/Sub, Artifact Registry and a budget alert. See [`infra/cost-check.md`](infra/cost-check.md) and `infra/teardown.sh`. Deployment scripts arrive with Phase 9a.
 
 ## Team
 Team **miscellaneous**, AI Builder Cup 2026.
