@@ -10,6 +10,15 @@ from app.domain.models import BomLine, Issue
 _MPN_CHARS = re.compile(r"^[A-Z0-9\-/.,#+()_&]+$")
 
 
+_CONSOLIDATION_ISSUES = {IssueCode.UOM_CONFLICT, IssueCode.DUPLICATE_MPN_CONFLICT}
+
+
+def revalidate(line: BomLine) -> list[Issue]:
+    """Re-run line checks after an edit, keeping issues that came from consolidation."""
+    kept = [i for i in line.validation if i.code in _CONSOLIDATION_ISSUES]
+    return [*kept, *validate_line(line)]
+
+
 def validate_line(line: BomLine) -> list[Issue]:
     issues: list[Issue] = []
     if line.dnp:

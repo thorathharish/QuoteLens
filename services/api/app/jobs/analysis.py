@@ -16,6 +16,7 @@ from app.infra.repositories import Repositories
 from app.ingestion.parse import ParsedBom, parse_rows
 from app.ingestion.service import IngestionService
 from app.jobs.dispatcher import JobContext
+from app.sourcing.service import SourcingService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 class AnalysisPipeline:
     repos: Repositories
     ingestion: IngestionService
+    sourcing: SourcingService
 
     async def __call__(self, job: Job, ctx: JobContext) -> None:
         project = await self.repos.projects.get(job.project_id)
@@ -38,19 +40,43 @@ class AnalysisPipeline:
 
     async def _run(self, job: Job, ctx: JobContext, project: Project) -> None:
         upload_id = job.payload.get("upload_id")
-        if not isinstance(upload_id, str):
-            raise ValidationFailedError("Analysis job has no upload_id")
-        upload = await self.repos.uploads(project.id).get(upload_id)
+        if upload_id is not None:
+            if not isinstance(upload_id, str):
+                raise ValidationFailedError("Analysis job has an invalid upload_id")
+            await self._ingest(project, upload_id, ctx)
 
+        lines = await self.repos.lines(project.id).all()
+        if not lines:
+            raise ValidationFailedError("The project has no BOM lines to analyze")
+        wanted = job.payload.get("line_ids")
+        if isinstance(wanted, list) and wanted:
+            lines = [line for line in lines if line.id in set(map(str, wanted))]
+
+        await ctx.progress("sourcing", 70)
+        outcome = await self.sourcing.source(project, lines)
+        for warning in outcome.warnings:
+            await ctx.warn(warning)
+
+        project = await self.repos.projects.get(project.id)
+        all_lines = await self.repos.lines(project.id).all()
+        project.stats.lines = len(all_lines)
+        project.stats.matched = sum(1 for line in all_lines if line.match.status == "MATCHED")
+        project.stats.data_issues = dict(
+            Counter(issue.code for line in all_lines for issue in line.validation)
+        )
+        project.status = ProjectStatus.IN_REVIEW
+        project.updated_at = utcnow()
+        await self.repos.projects.put(project)
+
+    async def _ingest(self, project: Project, upload_id: str, ctx: JobContext) -> None:
+        upload = await self.repos.uploads(project.id).get(upload_id)
         await ctx.progress("parse", 10)
         parsed = await self._parse(upload)
         if not parsed.lines:
             raise ValidationFailedError("No BOM lines were found below the header row")
 
-        await ctx.progress("save", 60)
+        await ctx.progress("save", 40)
         await self._replace_lines(project.id, parsed)
-
-        issues = Counter(issue.code for line in parsed.lines for issue in line.validation)
         project.source_file = SourceFile(
             filename=upload.filename,
             gcs_uri=upload.blob_key,
@@ -59,10 +85,6 @@ class AnalysisPipeline:
             header_row=upload.header_row,
         )
         project.mapping = {m.header: (m.field.value if m.field else None) for m in upload.mapping}
-        project.stats.lines = len(parsed.lines)
-        project.stats.data_issues = dict(issues)
-        project.status = ProjectStatus.IN_REVIEW
-        project.updated_at = utcnow()
         await self.repos.projects.put(project)
         logger.info(
             "Parsed BOM",

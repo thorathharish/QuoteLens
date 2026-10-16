@@ -53,7 +53,7 @@ class IngestionService:
 
     async def upload(self, project_id: str, filename: str, data: bytes) -> BomUpload:
         project = await self.repos.projects.get(project_id)
-        _ensure_not_busy(project)
+        ensure_not_busy(project)
 
         workbook = read_bom_file(filename, data, self.settings.max_upload_bytes)
         location = detect_header(workbook)
@@ -116,7 +116,7 @@ class IngestionService:
             )
             if existing.items:
                 return existing.items[0]
-        _ensure_not_busy(project)
+        ensure_not_busy(project)
         upload = await self.repos.uploads(project_id).get(upload_id)
 
         headers = await self._headers_for(upload, sheet, header_row)
@@ -227,7 +227,7 @@ def _apply_choices(
     return result
 
 
-def _ensure_not_busy(project: Project) -> None:
+def ensure_not_busy(project: Project) -> None:
     if project.status in _BUSY:
         raise InvalidStateError(
             f"Project is {project.status.value.lower()}; "

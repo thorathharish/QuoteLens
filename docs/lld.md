@@ -100,7 +100,7 @@ jobs/{jid}                           project_id, type, status, stage, progress(0
   - `cache_first`: cache when fresh (< 7 days), then live.
   - `demo_snapshot`: cache only.
 - Live results are written through to BigQuery.
-- Match: exact `mpn_norm` gives MATCHED. A fuzzy or prefix match with one candidate also gives MATCHED (confidence < 1, flagged). Several candidates give AMBIGUOUS and the user picks. None gives NOT_FOUND.
+- Match: only an exact `mpn_norm` gives MATCHED (confidence < 1 if the manufacturer differs). Fuzzy and prefix near-misses (typos, missing packaging suffixes) are **never auto-matched**: they are returned as `candidates` on a NOT_FOUND result, and the user confirms one via `POST /lines/{lid}/match` (audited). AMBIGUOUS is reserved for live data returning one MPN from several manufacturers.
 - **Offer selection** produces a Recommended fact with reasons. Filters: authorized and lifecycle not OBSOLETE. Score:
   `0.45·cost_norm(total buy cost incl. excess) + 0.25·stock_coverage + 0.20·lead_time_norm + 0.10·packaging_fit`
   The top-3 reasons are stored, e.g. "Covers 100% of the 5,000 needed from stock; ₹3.2k cheaper than the next option when MOQ excess is included". The user can override, which writes an audit entry.
