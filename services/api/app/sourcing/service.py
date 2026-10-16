@@ -96,8 +96,10 @@ class SourcingService:
                 outcome.matched += 1
                 catalog_offers = result.offers.get(line.mpn, [])
                 component = result.components[line.mpn]
-                components[component.mpn_norm] = _component(component, catalog_offers, evidence)
-                line_offers = [_offer(line.id, o, evidence) for o in catalog_offers]
+                components[component.mpn_norm] = component_from_catalog(
+                    component, catalog_offers, evidence
+                )
+                line_offers = [offer_from_catalog(line.id, o, evidence) for o in catalog_offers]
             else:
                 outcome.not_found += 1
 
@@ -157,7 +159,7 @@ class SourcingService:
         await self.repos.lines(project_id).put_many(lines)
 
 
-def _offer(line_id: str, row: CatalogOffer, evidence: dict[str, Evidence]) -> Offer:
+def offer_from_catalog(line_id: str, row: CatalogOffer, evidence: dict[str, Evidence]) -> Offer:
     ev_id = offer_evidence_id(row.distributor, row.sku)
     label = {
         SourceMode.LIVE: "live",
@@ -205,7 +207,7 @@ def _offer(line_id: str, row: CatalogOffer, evidence: dict[str, Evidence]) -> Of
     )
 
 
-def _component(
+def component_from_catalog(
     row: CatalogComponent, offers: list[CatalogOffer], evidence: dict[str, Evidence]
 ) -> Component:
     ev_id = component_evidence_id(row.mpn_norm)

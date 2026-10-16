@@ -3,7 +3,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.routers import bom, insights, jobs, lines, projects, risks, sourcing
+from app.api.v1.routers import (
+    alternatives,
+    bom,
+    insights,
+    jobs,
+    lines,
+    projects,
+    risks,
+    sourcing,
+)
 from app.app_factory import create_base_app
 from app.config import Settings
 from app.container import Container
@@ -27,6 +36,7 @@ def _configure(app: FastAPI, settings: Settings) -> None:
         sourcing.router,
         insights.router,
         risks.router,
+        alternatives.router,
     )
     for router in routers:
         app.include_router(router, prefix=API_PREFIX)

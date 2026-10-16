@@ -3,7 +3,7 @@ from app.domain.enums import JobStatus, JobType
 from app.domain.errors import ValidationFailedError
 from app.domain.models import Job
 from app.infra.jobbus import InlineJobBus, decode_job_message, encode_job_message
-from app.jobs.dispatcher import JobContext, enqueue_job
+from app.jobs.dispatcher import JobContext, JobDispatcher, enqueue_job
 
 
 async def _enqueue_and_drain(container: Container, job_type: JobType = JobType.ANALYSIS) -> Job:
@@ -55,10 +55,14 @@ async def test_unexpected_error_is_not_leaked(container: Container) -> None:
 
 
 async def test_missing_handler_fails_job(container: Container) -> None:
-    job = await _enqueue_and_drain(container, JobType.ALTERNATIVES)
-    assert job.status is JobStatus.FAILED
-    assert job.error is not None
-    assert job.error.code == "NO_HANDLER"
+    bare = JobDispatcher(container.repos)  # no handlers registered
+    job = Job(id="job_x", project_id="prj_1", type=JobType.ALTERNATIVES)
+    await container.repos.jobs.put(job)
+    finished = await bare.dispatch(job.id)
+    assert finished is not None
+    assert finished.status is JobStatus.FAILED
+    assert finished.error is not None
+    assert finished.error.code == "NO_HANDLER"
 
 
 async def test_redelivery_of_finished_job_is_a_no_op(container: Container) -> None:

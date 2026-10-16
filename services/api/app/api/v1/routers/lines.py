@@ -77,7 +77,11 @@ async def line_detail(repos: Repositories, pid: str, line: BomLine) -> LineDetai
         found = await repos.evidence(pid).find(ev_id)
         if found is not None:
             evidence[ev_id] = found
+    alternatives = (
+        await repos.alternatives(pid).list(filters=[Filter("line_id", "==", line.id)], limit=50)
+    ).items
     return LineDetail(
+        alternatives=sorted(alternatives, key=lambda a: (a.fit_class.value, a.candidate_mpn)),
         line=line,
         component=component,
         offers=sorted(offers, key=lambda o: (o.distributor, o.sku)),

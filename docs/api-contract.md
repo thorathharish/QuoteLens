@@ -43,9 +43,9 @@
 | 19 | `GET /projects/{pid}/impact` | Per volume (default: primary) | `?volume=` → `{volume, currency, totals{required_material, scrap_cost, excess_cost, material, adders, grand_total, per_unit}: Fact, waterfall[], lines[LineImpact with trace], recommendations[PRICE_BREAK_JUMP], unpriced_line_ids[]}` |
 | 20 | `POST /projects/{pid}/impact/simulate` | What-if (never saved) | `{volume, overrides[{line_id, scrap_pct?, offer_id?, qty_per?, on_hand?}]}` → `{baseline, simulated, delta: Fact}` |
 | **Alternatives** |||
-| 21 | `POST /projects/{pid}/lines/{lid}/alternatives/search` | Investigate | `{reason?, constraints?{same_package?:bool, max_lead_days?}}` → `202 {job_id}` |
-| 22 | `GET /projects/{pid}/alternatives` | Queue | `?line_id=&status=` → `Page<Alternative>` |
-| 23 | `POST /projects/{pid}/alternatives/{aid}/decision` | Approve/reject (gate 3) | `{decision: APPROVE\|REJECT, note}` → `{alternative, line?, triggered_job_id?}` |
+| 21 | `POST /projects/{pid}/lines/{lid}/alternatives/search` | Investigate (LangGraph: cross-refs → offers → parameter comparison → fit class → explanation) | `{reason?}` → `202 {job_id}`; the job warns when no alternates are known |
+| 22 | `GET /projects/{pid}/alternatives` | Queue | `?line_id=&status=` → `{items: Alternative[{candidate_mpn, manufacturer, fit_class, comparison[{attribute, original, candidate, critical, result}], offers_summary, delta_cost, delta_lead_days, explanation, evidence_ids, status}]}` |
+| 23 | `POST /projects/{pid}/alternatives/{aid}/decision` | Approve/reject (gate 3; audited) | `{decision: APPROVE\|REJECT, note (required)}` → `{alternative, line}`. APPROVE creates a line version with `substituted_from` and re-sources it. `409` for a NOT_SUITABLE candidate. |
 | **Copilot** |||
 | 24 | `POST /projects/{pid}/chat/sessions` | New session | `{focus?{line_id?, risk_id?}}` → `{session_id}` |
 | 25 | `POST /projects/{pid}/chat/sessions/{sid}/messages` | Ask (SSE) | `{content}` → `text/event-stream`: `tool_start{name,args}` · `tool_end{name,evidence_ids}` · `token{text}` · `citations[{evidence_id,label}]` · `done{message_id, grounded: bool}` · `error{code}` |

@@ -21,6 +21,7 @@ dependencies = [
     "python-multipart>=0.0.12",
     "langchain-core>=0.3",
     "langchain-google-genai>=3.0",
+    "langgraph>=0.2",
 ]
 
 [dependency-groups]

@@ -3,7 +3,7 @@ shape is already the public contract; internal fields are excluded explicitly.""
 
 from datetime import date
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -211,3 +211,24 @@ class SimulationResult(ApiModel):
 
 
 AssumptionsBody = Assumptions
+
+
+# ── Phase 5: alternatives ────────────────────────────────────
+
+
+class AlternativeSearch(ApiModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class AlternativeDecision(ApiModel):
+    decision: Literal["APPROVE", "REJECT"]
+    note: str = Field(min_length=3, max_length=1000)
+
+
+class AlternativeList(ApiModel):
+    items: list[Alternative]
+
+
+class DecisionResult(ApiModel):
+    alternative: Alternative
+    line: BomLine
