@@ -16,10 +16,16 @@ class ProviderResult:
     errors: list[str] = field(default_factory=list)
 
     def merge(self, other: "ProviderResult") -> None:
+        """Combine results; for the same distributor SKU the most recently fetched offer wins."""
         for mpn, component in other.components.items():
             self.components.setdefault(mpn, component)
         for mpn, offers in other.offers.items():
-            self.offers.setdefault(mpn, []).extend(offers)
+            by_sku = {(o.distributor, o.sku): o for o in self.offers.get(mpn, [])}
+            for offer in offers:
+                current = by_sku.get((offer.distributor, offer.sku))
+                if current is None or offer.fetched_at >= current.fetched_at:
+                    by_sku[(offer.distributor, offer.sku)] = offer
+            self.offers[mpn] = list(by_sku.values())
         self.errors.extend(other.errors)
 
 
@@ -34,6 +40,12 @@ class OfferProvider(Protocol):
 class CatalogSearch(Protocol):
     async def suggest(self, mpn: str, limit: int = 3) -> list[str]:
         """Known MPNs that closely resemble `mpn` (typos, missing suffixes)."""
+        ...
+
+
+class CacheWriter(Protocol):
+    async def write(self, offers: list[CatalogOffer]) -> None:
+        """Persist live offers so later analyses can use them as cached data."""
         ...
 
 

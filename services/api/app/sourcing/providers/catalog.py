@@ -12,6 +12,7 @@ from typing import Any
 from rapidfuzz import fuzz, process
 
 from app.catalog.rows import CatalogComponent, CatalogCrossRef, CatalogOffer
+from app.domain.enums import SourceMode
 from app.sourcing.providers.base import ProviderResult
 
 SUGGEST_MIN_SCORE = 85
@@ -123,6 +124,8 @@ class BigQueryCatalogProvider:
             component = CatalogComponent.model_validate(_component_row(row))
             result.components[component.mpn_norm] = component
         for row in offer_rows:
+            if row.get("mode") == SourceMode.LIVE.value:
+                row = {**row, "mode": SourceMode.CACHE.value}  # served from the cache now
             offer = CatalogOffer.model_validate(row)
             result.offers.setdefault(offer.mpn_norm, []).append(offer)
         return result
@@ -153,3 +156,29 @@ def _component_row(row: dict[str, Any]) -> dict[str, Any]:
 
     params = row.get("params")
     return {**row, "params": json.loads(params) if isinstance(params, str) else (params or {})}
+
+
+class BigQueryCacheWriter:
+    """Appends live offers to `offers_cache` with a load job (free), not streaming inserts."""
+
+    def __init__(self, project: str, dataset: str, location: str) -> None:
+        for identifier in (project, dataset):
+            if not _IDENTIFIER.match(identifier):
+                raise ValueError(f"Invalid BigQuery identifier: {identifier!r}")
+        from google.cloud import bigquery
+
+        self._bq = bigquery
+        self._client = bigquery.Client(project=project, location=location)
+        self._table = f"{project}.{dataset}.offers_cache"
+
+    async def write(self, offers: list[CatalogOffer]) -> None:
+        rows = [o.model_dump(mode="json") for o in offers]
+        config = self._bq.LoadJobConfig(
+            write_disposition=self._bq.WriteDisposition.WRITE_APPEND,
+            source_format=self._bq.SourceFormat.NEWLINE_DELIMITED_JSON,
+        )
+
+        def load() -> None:
+            self._client.load_table_from_json(rows, self._table, job_config=config).result()
+
+        await asyncio.to_thread(load)

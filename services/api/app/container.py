@@ -22,7 +22,12 @@ from app.jobs.dispatcher import JobDispatcher
 from app.quotation.service import QuotationService
 from app.risk.service import InsightService
 from app.sourcing.chain import OfferSourceChain
-from app.sourcing.providers.catalog import BigQueryCatalogProvider, SeedCatalogProvider
+from app.sourcing.providers.catalog import (
+    BigQueryCacheWriter,
+    BigQueryCatalogProvider,
+    SeedCatalogProvider,
+)
+from app.sourcing.providers.live import build_live_providers
 from app.sourcing.review import SourcingReview
 from app.sourcing.service import SourcingService
 
@@ -67,16 +72,19 @@ def build_blobs(settings: Settings) -> BlobStore:
 
 
 def build_offer_chain(settings: Settings) -> OfferSourceChain:
+    live = build_live_providers(settings) if settings.live_distributors_enabled else []
     if settings.catalog_backend is CatalogBackend.BIGQUERY:
         if not settings.gcp_project:
             raise ValueError("GCP_PROJECT is required when CATALOG_BACKEND=bigquery")
         bq = BigQueryCatalogProvider(
             settings.gcp_project, settings.bq_catalog_dataset, settings.gcp_region
         )
-        return OfferSourceChain(catalog=bq, search=bq, crossrefs=bq)
+        writer = BigQueryCacheWriter(
+            settings.gcp_project, settings.bq_catalog_dataset, settings.gcp_region
+        )
+        return OfferSourceChain(catalog=bq, search=bq, crossrefs=bq, live=live, cache_writer=writer)
     seed = SeedCatalogProvider(settings.catalog_seed_dir)
-    # Live distributor adapters (P1, issue-tracked) plug into `live=` here.
-    return OfferSourceChain(catalog=seed, search=seed, crossrefs=seed)
+    return OfferSourceChain(catalog=seed, search=seed, crossrefs=seed, live=live)
 
 
 def build_header_mapper(settings: Settings) -> HeaderMapper | None:

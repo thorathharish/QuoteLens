@@ -282,7 +282,7 @@ function WhatIf({
 
 function AssumptionsEditor({ projectId }: { projectId: string }) {
   const assumptions = useAssumptions(projectId);
-  const [form, setForm] = useState({ assembly: "", nre: "", overhead: "", margin: "" });
+  const [form, setForm] = useState({ assembly: "", nre: "", overhead: "", margin: "", inr: "" });
   useEffect(() => {
     const a = assumptions.data?.adders;
     if (a)
@@ -291,6 +291,7 @@ function AssumptionsEditor({ projectId }: { projectId: string }) {
         nre: a.nre ?? "",
         overhead: a.overhead_pct ? String(Number(a.overhead_pct) * 100) : "",
         margin: a.margin_pct ? String(Number(a.margin_pct) * 100) : "",
+        inr: assumptions.data?.fx_overrides?.["USD->INR"] ?? "",
       });
   }, [assumptions.data]);
   const save = useProjectMutation(projectId, () =>
@@ -299,7 +300,12 @@ function AssumptionsEditor({ projectId }: { projectId: string }) {
         params: { path: { pid: projectId } },
         body: {
           scrap_policy: assumptions.data?.scrap_policy,
-          fx_overrides: assumptions.data?.fx_overrides ?? {},
+          fx_overrides: (() => {
+            const rates: Record<string, string> = { ...(assumptions.data?.fx_overrides ?? {}) };
+            if (form.inr) rates["USD->INR"] = form.inr;
+            else delete rates["USD->INR"];
+            return rates;
+          })(),
           adders: {
             assembly_per_unit: form.assembly || null,
             nre: form.nre || null,
@@ -311,7 +317,7 @@ function AssumptionsEditor({ projectId }: { projectId: string }) {
     ),
   );
   return (
-    <Panel title="Quote adders">
+    <Panel title="Quote adders and exchange rate">
       <form
         className="grid grid-cols-2 gap-3"
         onSubmit={(e) => {
@@ -323,10 +329,18 @@ function AssumptionsEditor({ projectId }: { projectId: string }) {
         <Field label="NRE" inputMode="decimal" value={form.nre} onChange={(e) => setForm({ ...form, nre: e.target.value })} />
         <Field label="Overhead %" inputMode="decimal" value={form.overhead} onChange={(e) => setForm({ ...form, overhead: e.target.value })} />
         <Field label="Margin %" inputMode="decimal" value={form.margin} onChange={(e) => setForm({ ...form, margin: e.target.value })} />
-        <p className="col-span-2 text-xs text-ink-3">Adders are your assumptions and are labelled as such everywhere.</p>
+        <Field
+          label="INR per 1 USD"
+          inputMode="decimal"
+          hint="Lets offers priced in INR (Mouser, element14 India) be compared and costed."
+          value={form.inr}
+          onChange={(e) => setForm({ ...form, inr: e.target.value })}
+          className="col-span-2"
+        />
+        <p className="col-span-2 text-xs text-ink-3">Adders and exchange rates are your assumptions and are labelled as such everywhere.</p>
         <div className="col-span-2">
           <Button type="submit" disabled={save.isPending}>
-            Save adders
+            Save assumptions
           </Button>
           <ErrorNote error={save.error} />
         </div>

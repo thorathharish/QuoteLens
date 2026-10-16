@@ -90,6 +90,8 @@ class Settings(BaseSettings):
     mouser_api_key: SecretStr | None = None
     element14_api_key: SecretStr | None = None
     element14_store: str = "in.element14.com"
+    # Master switch for live distributor calls (tests and offline work set it to false).
+    live_distributors_enabled: bool = True
 
     # HTTP
     cors_origins: list[str] = ["http://localhost:3000"]
