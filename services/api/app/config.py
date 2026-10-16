@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.domain.enums import DataMode
@@ -81,9 +81,35 @@ class Settings(BaseSettings):
     llm_max_output_tokens: int = Field(default=1024, ge=64, le=8192)
     copilot_max_tool_calls: int = Field(default=6, ge=1, le=20)
 
+    # Distributor APIs for live data (P1, issue #12). Empty or unset = provider disabled.
+    # SecretStr keeps values out of logs, reprs and error output.
+    digikey_client_id: SecretStr | None = None
+    digikey_client_secret: SecretStr | None = None
+    digikey_sandbox: bool = False
+    mouser_api_key: SecretStr | None = None
+    element14_api_key: SecretStr | None = None
+    element14_store: str = "in.element14.com"
+
     # HTTP
     cors_origins: list[str] = ["http://localhost:3000"]
     max_upload_bytes: int = 5 * 1024 * 1024
+
+    @property
+    def configured_distributors(self) -> list[str]:
+        """Distributors whose credentials are present (blank values count as missing)."""
+
+        def present(*values: SecretStr | None) -> bool:
+            return all(v is not None and v.get_secret_value().strip() for v in values)
+
+        return [
+            name
+            for name, ok in (
+                ("DigiKey", present(self.digikey_client_id, self.digikey_client_secret)),
+                ("Mouser", present(self.mouser_api_key)),
+                ("element14", present(self.element14_api_key)),
+            )
+            if ok
+        ]
 
 
 @lru_cache
