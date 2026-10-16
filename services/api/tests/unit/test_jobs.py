@@ -20,7 +20,7 @@ async def test_successful_job_records_progress_and_completion(container: Contain
         await ctx.progress("sourcing", 40)
         stages.append(ctx.job.stage or "")
 
-    container.dispatcher.register(JobType.ANALYSIS, handler)
+    container.dispatcher.register(JobType.ANALYSIS, handler, replace=True)
     job = await _enqueue_and_drain(container)
 
     assert stages == ["sourcing"]
@@ -34,7 +34,7 @@ async def test_domain_error_marks_job_failed_with_code(container: Container) -> 
     async def handler(job: Job, ctx: JobContext) -> None:
         raise ValidationFailedError("BOM has no quantity column")
 
-    container.dispatcher.register(JobType.ANALYSIS, handler)
+    container.dispatcher.register(JobType.ANALYSIS, handler, replace=True)
     job = await _enqueue_and_drain(container)
 
     assert job.status is JobStatus.FAILED
@@ -46,7 +46,7 @@ async def test_unexpected_error_is_not_leaked(container: Container) -> None:
     async def handler(job: Job, ctx: JobContext) -> None:
         raise RuntimeError("secret internal detail")
 
-    container.dispatcher.register(JobType.ANALYSIS, handler)
+    container.dispatcher.register(JobType.ANALYSIS, handler, replace=True)
     job = await _enqueue_and_drain(container)
 
     assert job.error is not None
@@ -68,7 +68,7 @@ async def test_redelivery_of_finished_job_is_a_no_op(container: Container) -> No
         nonlocal calls
         calls += 1
 
-    container.dispatcher.register(JobType.ANALYSIS, handler)
+    container.dispatcher.register(JobType.ANALYSIS, handler, replace=True)
     job = await _enqueue_and_drain(container)
     await container.dispatcher.dispatch(job.id)
 

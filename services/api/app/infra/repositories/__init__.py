@@ -5,6 +5,7 @@ from app.domain.models import (
     Alternative,
     AuditEvent,
     BomLine,
+    BomUpload,
     ChatMessage,
     Job,
     Offer,
@@ -33,6 +34,9 @@ class Repositories:
 
     def lines(self, project_id: str) -> TypedCollection[BomLine]:
         return TypedCollection(self.store, ("projects", project_id, "lines"), BomLine)
+
+    def uploads(self, project_id: str) -> TypedCollection[BomUpload]:
+        return TypedCollection(self.store, ("projects", project_id, "uploads"), BomUpload)
 
     def offers(self, project_id: str) -> TypedCollection[Offer]:
         return TypedCollection(self.store, ("projects", project_id, "offers"), Offer)

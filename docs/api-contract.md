@@ -23,8 +23,8 @@
 | 3 | `GET /projects/{pid}/overview` | Readiness and KPIs | → `{status, readiness{pct, open_blockers}, totals_by_volume[Fact], risks_by_severity, spend_at_risk_pct, next_actions[]}` |
 | 4 | `PUT /projects/{pid}/assumptions` | Scrap, FX, adders | `{scrap_policy, fx_overrides, adders{assembly_per_unit?, nre?, overhead_pct?, margin_pct?}}` → `Assumptions` |
 | **BOM ingestion** |||
-| 5 | `POST /projects/{pid}/bom` | Upload (multipart `file`) | → `200 {upload_id, sheets[], selected_sheet, header_row, proposed_mapping[{column, field, confidence, method: ALIAS\|LLM\|NONE}], preview_rows[], unmapped[]}` |
-| 6 | `PUT /projects/{pid}/bom/mapping` | Confirm mapping (gate 1) | `{upload_id, sheet, header_row, mapping{column→field}}` → `202 {job_id}` (parse, validate, then analysis) |
+| 5 | `POST /projects/{pid}/bom` | Upload (multipart `file`) | → `200 {upload_id, filename, sheets[], selected_sheet, header_row (1-based), data_rows, proposed_mapping[{column_index, header, field, confidence, method: ALIAS\|LLM\|USER\|NONE, reason}], preview_rows[][], unmapped[], warnings[]}` |
+| 6 | `PUT /projects/{pid}/bom/mapping` | Confirm mapping (gate 1) | `{upload_id, mapping[{column_index, field\|null}] (overrides only), sheet?, header_row?}` → `202 {job_id}` (parse, validate, then analysis). `422` lists missing required columns. |
 | 7 | `GET /jobs/{job_id}` | Progress | → `{status: QUEUED\|RUNNING\|SUCCEEDED\|FAILED, stage, progress, warnings[], error?}` |
 | 8 | `POST /projects/{pid}/analysis` | Re-run (all or `line_ids`) | `{line_ids?, refresh_live?: bool}` → `202 {job_id}` |
 | **Lines and sourcing** |||

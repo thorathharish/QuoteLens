@@ -13,6 +13,7 @@ from app.domain.enums import (
     ActionType,
     AlternativeSource,
     AlternativeStatus,
+    BomField,
     ChatRole,
     CompareResult,
     DataMode,
@@ -22,6 +23,7 @@ from app.domain.enums import (
     JobStatus,
     JobType,
     Lifecycle,
+    MappingMethod,
     MatchStatus,
     NarrativeSource,
     ProjectStatus,
@@ -88,6 +90,7 @@ class ProjectStats(DomainModel):
     matched: int = 0
     risks_by_severity: dict[Severity, int] = {}
     open_blockers: int = 0
+    data_issues: dict[IssueCode, int] = {}
     spend_at_risk_pct: Decimal | None = None
     totals_by_volume: dict[str, Decimal] = {}
 
@@ -153,7 +156,36 @@ class BomLine(DomainModel):
     selected_offer_id: str | None = None
     substituted_from: str | None = None
     overrides: dict[str, Override] = {}
+    source_rows: list[int] = []  # 1-based spreadsheet rows this line came from
     version: int = 1
+
+
+class ColumnMapping(DomainModel):
+    column_index: int = Field(ge=0)
+    header: str
+    field: BomField | None = None
+    confidence: float = Field(default=0.0, ge=0, le=1)
+    method: MappingMethod = MappingMethod.NONE
+    reason: str | None = None
+
+
+class BomUpload(DomainModel):
+    """An uploaded BOM file awaiting (or after) mapping confirmation: human gate 1."""
+
+    id: str
+    filename: str
+    sha256: str
+    blob_key: str
+    size_bytes: int = Field(ge=0)
+    sheets: list[str]
+    selected_sheet: str
+    header_row: int = Field(ge=1, description="1-based row number of the header")
+    data_rows: int = Field(ge=0)
+    mapping: list[ColumnMapping]
+    preview_rows: list[list[str | None]] = []
+    warnings: list[str] = []
+    confirmed: bool = False
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 # ── Sourcing ─────────────────────────────────────────────────
@@ -333,6 +365,7 @@ class Job(DomainModel):
     warnings: list[str] = []
     error: JobError | None = None
     payload: dict[str, JsonValue] = {}
+    idempotency_key: str | None = None
     created_at: datetime = Field(default_factory=utcnow)
     started_at: datetime | None = None
     finished_at: datetime | None = None

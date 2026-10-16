@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.domain.enums import DataMode
 
-__all__ = ["DataMode", "JobBackend", "Settings", "StorageBackend", "get_settings"]
+__all__ = ["BlobBackend", "DataMode", "JobBackend", "Settings", "StorageBackend", "get_settings"]
 
 
 class JobBackend(StrEnum):
@@ -29,6 +29,11 @@ class StorageBackend(StrEnum):
     FIRESTORE = "firestore"
 
 
+class BlobBackend(StrEnum):
+    MEMORY = "memory"
+    GCS = "gcs"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -43,6 +48,7 @@ class Settings(BaseSettings):
 
     # Backends
     storage_backend: StorageBackend = StorageBackend.MEMORY
+    blob_backend: BlobBackend = BlobBackend.MEMORY
     job_backend: JobBackend = JobBackend.INLINE
     data_mode: DataMode = DataMode.CACHE_FIRST
 

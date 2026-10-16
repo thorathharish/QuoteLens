@@ -287,6 +287,7 @@ MESSY_FORMAT: list[BomRow] = [
         uom="Nos",
         dnp="N",
         extra={"Remarks": "Fit only for debug builds"},
+        expect=Expect(issues=("DNP",), note="Fitted = N: excluded from costing"),
     ),
     BomRow(
         "C1-C12",

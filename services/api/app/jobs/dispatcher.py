@@ -49,8 +49,9 @@ class JobDispatcher:
         self._repos = repos
         self._handlers: dict[JobType, JobHandler] = {}
 
-    def register(self, job_type: JobType, handler: JobHandler) -> None:
-        if job_type in self._handlers:
+    def register(self, job_type: JobType, handler: JobHandler, *, replace: bool = False) -> None:
+        """Register the handler for a job type. `replace` is for tests that swap in fakes."""
+        if job_type in self._handlers and not replace:
             raise ValueError(f"Handler for {job_type} already registered")
         self._handlers[job_type] = handler
 
@@ -111,9 +112,16 @@ async def enqueue_job(
     project_id: str,
     job_type: JobType,
     payload: dict[str, JsonValue] | None = None,
+    idempotency_key: str | None = None,
 ) -> Job:
     """Persist a QUEUED job, then publish its id. The message carries only the id."""
-    job = Job(id=new_id("job"), project_id=project_id, type=job_type, payload=payload or {})
+    job = Job(
+        id=new_id("job"),
+        project_id=project_id,
+        type=job_type,
+        payload=payload or {},
+        idempotency_key=idempotency_key,
+    )
     await repos.jobs.put(job)
     await publisher.publish(job.id)
     return job
