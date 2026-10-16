@@ -11,7 +11,19 @@
   ],
   "target_ship_offset_days": 56,
   "open_blockers": 0,
-  "seeded_rows": [],
+  "seeded_rows": [
+    {
+      "row": 10,
+      "refdes": "R11",
+      "mpn": "RC0603FR-071KL",
+      "match": "MATCHED",
+      "issues": [
+        "DNP"
+      ],
+      "risks": [],
+      "note": "Fitted = N: excluded from costing"
+    }
+  ],
   "unseeded_rows_expectation": "MATCHED with no data issues and no seeded risks",
   "totals": null,
   "_totals_note": "Per-volume totals are frozen in Phase 4, once the impact engine exists."

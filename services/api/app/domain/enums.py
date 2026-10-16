@@ -57,6 +57,31 @@ class IssueCode(StrEnum):
     DNP = "DNP"
 
 
+class BomField(StrEnum):
+    """Canonical BOM columns a spreadsheet header can map to."""
+
+    CPN = "cpn"
+    MPN = "mpn"
+    MANUFACTURER = "manufacturer"
+    DESCRIPTION = "description"
+    QTY_PER = "qty_per"
+    UOM = "uom"
+    REFDES = "refdes"
+    DNP = "dnp"
+    FITTED = "fitted"
+    UNIT_PRICE = "unit_price"
+    PACKAGE = "package"
+    VALUE = "value"
+    NOTES = "notes"
+
+
+class MappingMethod(StrEnum):
+    ALIAS = "ALIAS"
+    LLM = "LLM"
+    USER = "USER"
+    NONE = "NONE"
+
+
 class MatchStatus(StrEnum):
     PENDING = "PENDING"
     MATCHED = "MATCHED"

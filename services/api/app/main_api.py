@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1.routers import bom, jobs, lines, projects
 from app.app_factory import create_base_app
 from app.config import Settings
 from app.container import Container
@@ -18,7 +19,8 @@ def _configure(app: FastAPI, settings: Settings) -> None:
         allow_headers=["Content-Type", "X-Demo-Role", "X-Request-Id", "Idempotency-Key"],
         expose_headers=["X-Request-Id"],
     )
-    # Versioned routers are mounted under API_PREFIX as phases land.
+    for router in (projects.router, bom.router, jobs.router, lines.router):
+        app.include_router(router, prefix=API_PREFIX)
 
 
 def create_app(container: Container | None = None) -> FastAPI:

@@ -158,14 +158,14 @@ In `app/ingestion/`:
 - `header_detect.py`: picks the sheet and header row by best alias score over the first 25 rows.
 - `column_mapper.py`
   - Exact or fuzzy alias match first (rapidfuzz ≥ 90).
-  - Otherwise a `GeminiColumnMapper` (LangChain `ChatVertexAI.with_structured_output`; prompt says "null if unsure"; header names and sample values passed as delimited data).
+  - Otherwise a `GeminiHeaderMapper` (LangChain `ChatGoogleGenerativeAI(vertexai=True).with_structured_output`; `ChatVertexAI` is deprecated; prompt says "null if unsure"; header names and sample values passed as JSON data).
   - Falls back to `NONE` if the LLM is unavailable.
 - `normalize.py`: MPN, manufacturer alias table, qty (Decimal), UOM map, refdes range expansion.
 - `validate.py`: issue codes per LLD.
 - `consolidate.py`: duplicate MPNs are merged; mixed UOM produces a `UOM_CONFLICT` issue instead.
 - Every parsed value is an `actual()` Fact with a `BOM_CELL` evidence (`sheet!A12`).
 
-API (`api/v1/routers/projects.py`, `bom.py`): endpoints #1–3 and #5–7. The upload is stored in GCS with its sha256.
+API (`api/v1/routers/projects.py`, `bom.py`, `jobs.py`, `lines.py`): endpoints #1–2, #5–7 and a basic #9 (lines list). The upload is stored in GCS with its sha256. #3 (overview) moves to Phase 4, where readiness exists.
 
 **Tests:** unit tests per module; header detection on `messy_format`; a fake LLM mapper; golden check that the parsed line count matches the expected value.
 
@@ -227,7 +227,7 @@ In `app/alternatives/`:
 In `app/copilot/`:
 - `tools.py`: the 9 tools from the LLD. They are thin wrappers over the existing services, return JSON with `evidence_ids`, and are read-only except `simulate`.
 - `prompts.py`: the system contract (answer only from tools, cite `[E:id]`, say "Not available in project data" when needed). BOM text is treated as data.
-- `graph.py`: LangGraph ReAct (`create_react_agent`) with ChatVertexAI on Gemini Pro (Flash fallback); history from Firestore with the last 10 turns.
+- `graph.py`: LangGraph ReAct (`create_react_agent`) with `ChatGoogleGenerativeAI(vertexai=True)` on Gemini Pro (Flash fallback); history from Firestore with the last 10 turns.
 - `grounding.py`:
   - Extracts the numbers in the answer and checks they appear in the turn's tool outputs.
   - On failure it regenerates once, then sets `grounded=false`.

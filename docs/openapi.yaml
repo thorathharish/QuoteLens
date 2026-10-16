@@ -747,28 +747,41 @@ components:
       type: object
       properties:
         upload_id: {type: string}
+        filename: {type: string}
         sheets: {type: array, items: {type: string}}
         selected_sheet: {type: string}
-        header_row: {type: integer}
+        header_row: {type: integer, minimum: 1, description: 1-based row number of the detected header}
+        data_rows: {type: integer}
         proposed_mapping:
           type: array
           items:
             type: object
             properties:
-              column: {type: string}
-              field: {type: [string, 'null'], enum: [cpn, mpn, manufacturer, description, qty_per, uom, refdes, dnp, unit_price, package, value, notes, null]}
+              column_index: {type: integer, minimum: 0}
+              header: {type: string}
+              field: {type: [string, 'null'], enum: [cpn, mpn, manufacturer, description, qty_per, uom, refdes, dnp, fitted, unit_price, package, value, notes, null]}
               confidence: {type: number}
-              method: {type: string, enum: [ALIAS, LLM, NONE]}
-        preview_rows: {type: array, items: {type: object}}
+              method: {type: string, enum: [ALIAS, LLM, USER, NONE]}
+              reason: {type: [string, 'null']}
+        preview_rows: {type: array, items: {type: array, items: {type: [string, 'null']}}}
         unmapped: {type: array, items: {type: string}}
+        warnings: {type: array, items: {type: string}}
     MappingConfirm:
       type: object
-      required: [upload_id, sheet, header_row, mapping]
+      required: [upload_id, mapping]
       properties:
         upload_id: {type: string}
-        sheet: {type: string}
-        header_row: {type: integer, minimum: 0}
-        mapping: {type: object, additionalProperties: {type: [string, 'null']}}
+        mapping:
+          type: array
+          description: Overrides by column index; columns not listed keep the proposed field. Use field null to unmap.
+          items:
+            type: object
+            required: [column_index, field]
+            properties:
+              column_index: {type: integer, minimum: 0}
+              field: {type: [string, 'null']}
+        sheet: {type: [string, 'null'], description: Defaults to the detected sheet}
+        header_row: {type: [integer, 'null'], minimum: 1, description: 1-based; defaults to the detected row}
     Job:
       type: object
       properties:

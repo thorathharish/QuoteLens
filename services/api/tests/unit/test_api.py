@@ -59,7 +59,7 @@ async def test_worker_runs_pushed_job(worker_client: AsyncClient, container: Con
     async def handler(job: Job, ctx: JobContext) -> None:
         return None
 
-    container.dispatcher.register(JobType.ANALYSIS, handler)
+    container.dispatcher.register(JobType.ANALYSIS, handler, replace=True)
     await container.repos.jobs.put(Job(id="job_1", project_id="prj_1", type=JobType.ANALYSIS))
 
     response = await worker_client.post(
