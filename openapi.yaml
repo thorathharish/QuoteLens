@@ -1,0 +1,1059 @@
+openapi: 3.1.0
+info:
+  title: QuoteLens API
+  version: 0.1.0-draft
+  description: |
+    Evidence-backed BOM → quotation API (AI Builder Cup 2026).
+    DRAFT for design review. Once implemented, this file is generated from FastAPI and the generated file is authoritative.
+    Conventions: snake_case JSON; money as decimal strings plus currency; every displayed value may be a Fact;
+    errors use the ErrorEnvelope; `X-Demo-Role` is used only for audit attribution (no auth in the demo).
+servers:
+  - url: /api/v1
+tags:
+  - {name: projects}
+  - {name: bom}
+  - {name: jobs}
+  - {name: lines}
+  - {name: sourcing}
+  - {name: risks}
+  - {name: impact}
+  - {name: alternatives}
+  - {name: copilot}
+  - {name: quotes}
+  - {name: evidence}
+  - {name: demo}
+  - {name: health}
+
+paths:
+  /projects:
+    post:
+      tags: [projects]
+      operationId: createProject
+      parameters: [{$ref: '#/components/parameters/DemoRole'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProjectCreate'}}}
+      responses:
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Project'}}}}
+        '422': {$ref: '#/components/responses/Error'}
+    get:
+      tags: [projects]
+      operationId: listProjects
+      parameters: [{$ref: '#/components/parameters/Limit'}, {$ref: '#/components/parameters/Cursor'}]
+      responses:
+        '200':
+          description: OK
+          content: {application/json: {schema: {$ref: '#/components/schemas/ProjectPage'}}}
+  /projects/{pid}:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    get:
+      tags: [projects]
+      operationId: getProject
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Project'}}}}
+        '404': {$ref: '#/components/responses/Error'}
+    delete:
+      tags: [projects]
+      operationId: deleteProject
+      responses:
+        '204': {description: Deleted}
+        '404': {$ref: '#/components/responses/Error'}
+  /projects/{pid}/overview:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    get:
+      tags: [projects]
+      operationId: getOverview
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Overview'}}}}
+  /projects/{pid}/assumptions:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    get:
+      tags: [projects]
+      operationId: getAssumptions
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Assumptions'}}}}
+    put:
+      tags: [projects]
+      operationId: putAssumptions
+      parameters: [{$ref: '#/components/parameters/DemoRole'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/Assumptions'}}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Assumptions'}}}}
+
+  /projects/{pid}/bom:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    post:
+      tags: [bom]
+      operationId: uploadBom
+      summary: Upload a BOM file and get a proposed column mapping and preview
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary, description: '.xlsx, .csv or .tsv; at most 5 MB'}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/UploadPreview'}}}}
+        '413': {$ref: '#/components/responses/Error'}
+        '415': {$ref: '#/components/responses/Error'}
+  /projects/{pid}/bom/mapping:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    put:
+      tags: [bom]
+      operationId: confirmMapping
+      summary: Human gate 1. Confirm the column mapping, which starts parsing and analysis.
+      parameters: [{$ref: '#/components/parameters/DemoRole'}, {$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/MappingConfirm'}}}
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        '409': {$ref: '#/components/responses/Error'}
+        '422': {$ref: '#/components/responses/Error'}
+  /projects/{pid}/analysis:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    post:
+      tags: [bom]
+      operationId: runAnalysis
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                line_ids: {type: array, items: {type: string}}
+                refresh_live: {type: boolean, default: false}
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+  /jobs/{job_id}:
+    get:
+      tags: [jobs]
+      operationId: getJob
+      parameters: [{name: job_id, in: path, required: true, schema: {type: string}}]
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Job'}}}}
+        '404': {$ref: '#/components/responses/Error'}
+
+  /projects/{pid}/lines:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    get:
+      tags: [lines]
+      operationId: listLines
+      parameters:
+        - {name: issue, in: query, schema: {type: string}}
+        - {name: risk_severity, in: query, schema: {$ref: '#/components/schemas/Severity'}}
+        - {name: match_status, in: query, schema: {$ref: '#/components/schemas/MatchStatus'}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: sort, in: query, schema: {type: string, example: '-extended_cost'}}
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Cursor'}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/LinePage'}}}}
+  /projects/{pid}/lines/{lid}:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {$ref: '#/components/parameters/Lid'}]
+    get:
+      tags: [lines]
+      operationId: getLine
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/LineDetail'}}}}
+    patch:
+      tags: [lines]
+      operationId: patchLine
+      summary: Correct BOM data (audited; triggers partial re-analysis)
+      parameters: [{$ref: '#/components/parameters/DemoRole'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/LinePatch'}}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  line: {$ref: '#/components/schemas/BomLine'}
+                  triggered_job_id: {type: [string, 'null']}
+  /projects/{pid}/lines/{lid}/match:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {$ref: '#/components/parameters/Lid'}]
+    post:
+      tags: [lines]
+      operationId: resolveMatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                component_id: {type: string}
+                mpn: {type: string}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/LineDetail'}}}}
+  /projects/{pid}/lines/{lid}/offers:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {$ref: '#/components/parameters/Lid'}]
+    get:
+      tags: [sourcing]
+      operationId: listOffers
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  offers: {type: array, items: {$ref: '#/components/schemas/Offer'}}
+                  recommended: {$ref: '#/components/schemas/OfferRecommendation'}
+  /projects/{pid}/lines/{lid}/selected-offer:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {$ref: '#/components/parameters/Lid'}]
+    put:
+      tags: [sourcing]
+      operationId: selectOffer
+      parameters: [{$ref: '#/components/parameters/DemoRole'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [offer_id, reason]
+              properties:
+                offer_id: {type: string}
+                reason: {type: string, minLength: 3}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/LineDetail'}}}}
+  /components/lookup:
+    get:
+      tags: [sourcing]
+      operationId: lookupComponent
+      parameters:
+        - {name: mpn, in: query, required: true, schema: {type: string}}
+        - {name: manufacturer, in: query, schema: {type: string}}
+        - {name: mode, in: query, schema: {$ref: '#/components/schemas/DataMode'}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  component: {$ref: '#/components/schemas/Component'}
+                  offers: {type: array, items: {$ref: '#/components/schemas/Offer'}}
+                  evidence: {type: array, items: {$ref: '#/components/schemas/Evidence'}}
+
+  /projects/{pid}/risks:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    get:
+      tags: [risks]
+      operationId: listRisks
+      parameters:
+        - {name: status, in: query, schema: {$ref: '#/components/schemas/RiskStatus'}}
+        - {name: severity, in: query, schema: {$ref: '#/components/schemas/Severity'}}
+        - {name: category, in: query, schema: {$ref: '#/components/schemas/RiskCategory'}}
+        - {name: line_id, in: query, schema: {type: string}}
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Cursor'}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary: {$ref: '#/components/schemas/RiskSummary'}
+                  items: {type: array, items: {$ref: '#/components/schemas/Risk'}}
+                  next_cursor: {type: [string, 'null']}
+  /projects/{pid}/risks/{rid}:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {name: rid, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [risks]
+      operationId: getRisk
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/Risk'}
+                  - type: object
+                    properties:
+                      evidence: {type: array, items: {$ref: '#/components/schemas/Evidence'}}
+    patch:
+      tags: [risks]
+      operationId: reviewRisk
+      summary: Human gate 2. Acknowledge, resolve or waive a risk. A note is required when waiving.
+      parameters: [{$ref: '#/components/parameters/DemoRole'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [ACKNOWLEDGED, RESOLVED, WAIVED]}
+                note: {type: string}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Risk'}}}}
+        '422': {$ref: '#/components/responses/Error'}
+
+  /projects/{pid}/impact:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    get:
+      tags: [impact]
+      operationId: getImpact
+      parameters: [{name: volume, in: query, required: true, schema: {type: integer, minimum: 1}}]
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/ImpactResult'}}}}
+  /projects/{pid}/impact/simulate:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    post:
+      tags: [impact]
+      operationId: simulateImpact
+      summary: Non-persistent what-if
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [volume]
+              properties:
+                volume: {type: integer, minimum: 1}
+                overrides:
+                  type: array
+                  items:
+                    type: object
+                    required: [line_id]
+                    properties:
+                      line_id: {type: string}
+                      scrap_pct: {type: number, minimum: 0, maximum: 1}
+                      offer_id: {type: string}
+                      qty_per: {$ref: '#/components/schemas/Decimal'}
+                      on_hand: {type: integer, minimum: 0}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: '#/components/schemas/ImpactResult'}
+                  - type: object
+                    properties:
+                      delta_vs_baseline: {$ref: '#/components/schemas/Decimal'}
+
+  /projects/{pid}/lines/{lid}/alternatives/search:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {$ref: '#/components/parameters/Lid'}]
+    post:
+      tags: [alternatives]
+      operationId: searchAlternatives
+      parameters: [{$ref: '#/components/parameters/IdempotencyKey'}]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: {type: string}
+                constraints:
+                  type: object
+                  properties:
+                    same_package: {type: boolean, default: true}
+                    max_lead_days: {type: integer}
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+  /projects/{pid}/alternatives:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    get:
+      tags: [alternatives]
+      operationId: listAlternatives
+      parameters:
+        - {name: line_id, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string, enum: [PROPOSED, APPROVED, REJECTED]}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/Alternative'}}
+                  next_cursor: {type: [string, 'null']}
+  /projects/{pid}/alternatives/{aid}/decision:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {name: aid, in: path, required: true, schema: {type: string}}]
+    post:
+      tags: [alternatives]
+      operationId: decideAlternative
+      summary: Human gate 3. Approve or reject an alternate. Nothing is ever auto-replaced.
+      parameters: [{$ref: '#/components/parameters/DemoRole'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, note]
+              properties:
+                decision: {type: string, enum: [APPROVE, REJECT]}
+                note: {type: string, minLength: 3}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alternative: {$ref: '#/components/schemas/Alternative'}
+                  line: {$ref: '#/components/schemas/BomLine'}
+                  triggered_job_id: {type: [string, 'null']}
+        '409': {$ref: '#/components/responses/Error'}
+
+  /projects/{pid}/chat/sessions:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    post:
+      tags: [copilot]
+      operationId: createChatSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                focus:
+                  type: object
+                  properties:
+                    line_id: {type: string}
+                    risk_id: {type: string}
+      responses:
+        '201':
+          description: Created
+          content: {application/json: {schema: {type: object, properties: {session_id: {type: string}}}}}
+  /projects/{pid}/chat/sessions/{sid}/messages:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {name: sid, in: path, required: true, schema: {type: string}}]
+    post:
+      tags: [copilot]
+      operationId: sendChatMessage
+      summary: Ask the copilot (streams Server-Sent Events)
+      description: |
+        SSE event types:
+        - `tool_start` {name, args}
+        - `tool_end` {name, evidence_ids[]}
+        - `token` {text}
+        - `citations` [{evidence_id, label}]
+        - `done` {message_id, grounded: bool}
+        - `error` {code, message}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: {type: string, minLength: 1, maxLength: 4000}
+      responses:
+        '200':
+          description: Event stream
+          content: {text/event-stream: {schema: {type: string}}}
+        '503': {$ref: '#/components/responses/Error'}
+    get:
+      tags: [copilot]
+      operationId: listChatMessages
+      parameters: [{$ref: '#/components/parameters/Limit'}, {$ref: '#/components/parameters/Cursor'}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/ChatMessage'}}
+                  next_cursor: {type: [string, 'null']}
+
+  /projects/{pid}/quotes:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    post:
+      tags: [quotes]
+      operationId: createQuote
+      parameters: [{$ref: '#/components/parameters/DemoRole'}]
+      requestBody:
+        content: {application/json: {schema: {type: object, properties: {note: {type: string}}}}}
+      responses:
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/QuoteVersion'}}}}
+    get:
+      tags: [quotes]
+      operationId: listQuotes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {type: object, properties: {items: {type: array, items: {$ref: '#/components/schemas/QuoteVersion'}}}}
+  /projects/{pid}/quotes/{version}:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {$ref: '#/components/parameters/Version'}]
+    get:
+      tags: [quotes]
+      operationId: getQuote
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/QuoteVersion'}}}}
+  /projects/{pid}/quotes/{version}/finalize:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {$ref: '#/components/parameters/Version'}]
+    post:
+      tags: [quotes]
+      operationId: finalizeQuote
+      summary: Human gate 4. Returns 409 QUOTE_HAS_OPEN_BLOCKERS if any blocker is open.
+      parameters: [{$ref: '#/components/parameters/DemoRole'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {type: object, required: [note], properties: {note: {type: string}}}}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/QuoteVersion'}}}}
+        '409': {$ref: '#/components/responses/Error'}
+  /projects/{pid}/quotes/{version}/export:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {$ref: '#/components/parameters/Version'}]
+    get:
+      tags: [quotes]
+      operationId: exportQuote
+      parameters: [{name: format, in: query, schema: {type: string, enum: [xlsx], default: xlsx}}]
+      responses:
+        '200':
+          description: Signed download URL (valid 15 min)
+          content:
+            application/json:
+              schema: {type: object, properties: {download_url: {type: string, format: uri}, expires_at: {type: string, format: date-time}}}
+
+  /projects/{pid}/evidence/{eid}:
+    parameters: [{$ref: '#/components/parameters/Pid'}, {name: eid, in: path, required: true, schema: {type: string}}]
+    get:
+      tags: [evidence]
+      operationId: getEvidence
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Evidence'}}}}
+  /projects/{pid}/audit:
+    parameters: [{$ref: '#/components/parameters/Pid'}]
+    get:
+      tags: [evidence]
+      operationId: listAudit
+      parameters: [{$ref: '#/components/parameters/Limit'}, {$ref: '#/components/parameters/Cursor'}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/AuditEvent'}}
+                  next_cursor: {type: [string, 'null']}
+
+  /demo/projects:
+    post:
+      tags: [demo]
+      operationId: seedDemoProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scenario]
+              properties:
+                scenario: {type: string, enum: [motor_controller, iot_sensor, messy_format]}
+      responses:
+        '201':
+          description: Seeded
+          content: {application/json: {schema: {type: object, properties: {project_id: {type: string}, job_id: {type: string}}}}}
+  /healthz:
+    get:
+      tags: [health]
+      operationId: healthz
+      responses: {'200': {description: Alive}}
+  /readyz:
+    get:
+      tags: [health]
+      operationId: readyz
+      responses:
+        '200':
+          description: Dependency status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: {type: string, enum: [ok, degraded]}
+                  deps: {type: object, additionalProperties: {type: string}}
+
+components:
+  parameters:
+    Pid: {name: pid, in: path, required: true, schema: {type: string}}
+    Lid: {name: lid, in: path, required: true, schema: {type: string}}
+    Version: {name: version, in: path, required: true, schema: {type: integer, minimum: 1}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+    Cursor: {name: cursor, in: query, schema: {type: string}}
+    DemoRole:
+      name: X-Demo-Role
+      in: header
+      description: Audit attribution only (no authentication in the demo)
+      schema: {type: string, enum: [SOURCING, QUOTE_ENGINEER, ENGINEERING, MANAGER, VIEWER], default: VIEWER}
+    IdempotencyKey: {name: Idempotency-Key, in: header, schema: {type: string, maxLength: 128}}
+
+  responses:
+    Error:
+      description: Error
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    JobAccepted:
+      description: Job accepted
+      content:
+        application/json:
+          schema: {type: object, required: [job_id], properties: {job_id: {type: string}}}
+
+  schemas:
+    Decimal: {type: string, pattern: '^-?\d+(\.\d+)?$', description: Decimal as string}
+    Provenance: {type: string, enum: [ACTUAL, CALCULATED, ASSUMED, UNAVAILABLE, RECOMMENDED]}
+    DataMode: {type: string, enum: [live_first, cache_first, demo_snapshot]}
+    SourceMode: {type: string, enum: [LIVE, CACHE, DEMO_SNAPSHOT]}
+    Severity: {type: string, enum: [BLOCKER, HIGH, MEDIUM, LOW]}
+    RiskCategory: {type: string, enum: [DATA, SUPPLY, PRICE, LIFECYCLE, QUANTITY]}
+    RiskStatus: {type: string, enum: [OPEN, ACKNOWLEDGED, RESOLVED, WAIVED]}
+    MatchStatus: {type: string, enum: [PENDING, MATCHED, AMBIGUOUS, NOT_FOUND]}
+    Lifecycle: {type: string, enum: [ACTIVE, NRND, LAST_TIME_BUY, EOL, OBSOLETE, UNKNOWN]}
+    ProjectStatus: {type: string, enum: [DRAFT, MAPPING_REVIEW, ANALYZING, IN_REVIEW, QUOTE_READY, FINALIZED, FAILED]}
+
+    Fact:
+      type: object
+      required: [provenance]
+      properties:
+        value: {description: Any JSON value; null when UNAVAILABLE}
+        unit: {type: [string, 'null']}
+        provenance: {$ref: '#/components/schemas/Provenance'}
+        evidence_ids: {type: array, items: {type: string}}
+        formula: {type: [string, 'null']}
+        note: {type: [string, 'null'], description: Assumption or unavailability reason}
+
+    Evidence:
+      type: object
+      required: [id, kind, source_name]
+      properties:
+        id: {type: string}
+        kind: {type: string, enum: [DISTRIBUTOR_OFFER, CATALOG_SNAPSHOT, BOM_CELL, USER_OVERRIDE, RULE_EVAL, CALC_TRACE]}
+        source_name: {type: string}
+        source_ref: {type: [string, 'null'], description: 'SKU, URL or sheet!cell'}
+        fetched_at: {type: [string, 'null'], format: date-time}
+        mode: {$ref: '#/components/schemas/SourceMode'}
+        payload_excerpt: {type: object}
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [VALIDATION_ERROR, NOT_FOUND, CONFLICT, INVALID_STATE, UNSUPPORTED_FILE, FILE_TOO_LARGE,
+                     UPSTREAM_UNAVAILABLE, LLM_UNAVAILABLE, RATE_LIMITED, QUOTE_HAS_OPEN_BLOCKERS, INTERNAL]
+            message: {type: string}
+            details: {type: object}
+            request_id: {type: string}
+
+    ProjectCreate:
+      type: object
+      required: [name, currency, build_quantities]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        customer: {type: string}
+        currency: {type: string, pattern: '^[A-Z]{3}$', example: USD}
+        build_quantities: {type: array, minItems: 1, maxItems: 5, items: {type: integer, minimum: 1}}
+        target_ship_date: {type: string, format: date}
+        data_mode: {$ref: '#/components/schemas/DataMode'}
+    Project:
+      allOf:
+        - {$ref: '#/components/schemas/ProjectCreate'}
+        - type: object
+          properties:
+            id: {type: string}
+            status: {$ref: '#/components/schemas/ProjectStatus'}
+            source_file:
+              type: [object, 'null']
+              properties:
+                filename: {type: string}
+                sha256: {type: string}
+                sheet: {type: string}
+                header_row: {type: integer}
+            stats: {type: object}
+            created_at: {type: string, format: date-time}
+            updated_at: {type: string, format: date-time}
+    ProjectPage:
+      type: object
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Project'}}
+        next_cursor: {type: [string, 'null']}
+    Overview:
+      type: object
+      properties:
+        status: {$ref: '#/components/schemas/ProjectStatus'}
+        readiness:
+          type: object
+          properties:
+            pct: {type: number}
+            open_blockers: {type: integer}
+            checklist: {type: array, items: {type: object, properties: {item: {type: string}, done: {type: boolean}}}}
+        totals_by_volume:
+          type: array
+          items:
+            type: object
+            properties:
+              volume: {type: integer}
+              total: {$ref: '#/components/schemas/Fact'}
+              per_unit: {$ref: '#/components/schemas/Fact'}
+        risks_by_severity: {type: object, additionalProperties: {type: integer}}
+        spend_at_risk_pct: {$ref: '#/components/schemas/Fact'}
+        next_actions: {type: array, items: {type: object, properties: {label: {type: string}, target: {type: string}}}}
+    Assumptions:
+      type: object
+      properties:
+        scrap_policy:
+          type: object
+          properties:
+            mode: {type: string, enum: [price_tier, package, fixed]}
+            fixed_pct: {type: number}
+            tiers: {type: array, items: {type: object, properties: {min_unit_price: {$ref: '#/components/schemas/Decimal'}, scrap_pct: {type: number}}}}
+        fx_overrides: {type: object, additionalProperties: {$ref: '#/components/schemas/Decimal'}}
+        adders:
+          type: object
+          properties:
+            assembly_per_unit: {$ref: '#/components/schemas/Decimal'}
+            nre: {$ref: '#/components/schemas/Decimal'}
+            overhead_pct: {type: number}
+            margin_pct: {type: number}
+
+    UploadPreview:
+      type: object
+      properties:
+        upload_id: {type: string}
+        sheets: {type: array, items: {type: string}}
+        selected_sheet: {type: string}
+        header_row: {type: integer}
+        proposed_mapping:
+          type: array
+          items:
+            type: object
+            properties:
+              column: {type: string}
+              field: {type: [string, 'null'], enum: [cpn, mpn, manufacturer, description, qty_per, uom, refdes, dnp, unit_price, package, value, notes, null]}
+              confidence: {type: number}
+              method: {type: string, enum: [ALIAS, LLM, NONE]}
+        preview_rows: {type: array, items: {type: object}}
+        unmapped: {type: array, items: {type: string}}
+    MappingConfirm:
+      type: object
+      required: [upload_id, sheet, header_row, mapping]
+      properties:
+        upload_id: {type: string}
+        sheet: {type: string}
+        header_row: {type: integer, minimum: 0}
+        mapping: {type: object, additionalProperties: {type: [string, 'null']}}
+    Job:
+      type: object
+      properties:
+        id: {type: string}
+        project_id: {type: string}
+        type: {type: string, enum: [ANALYSIS, ALTERNATIVES]}
+        status: {type: string, enum: [QUEUED, RUNNING, SUCCEEDED, FAILED]}
+        stage: {type: string, example: sourcing}
+        progress: {type: integer, minimum: 0, maximum: 100}
+        warnings: {type: array, items: {type: string}}
+        error: {type: [object, 'null'], properties: {code: {type: string}, message: {type: string}}}
+
+    Issue:
+      type: object
+      properties:
+        code: {type: string, enum: [MISSING_MPN, MISSING_MFR, QTY_INVALID, REFDES_QTY_MISMATCH, DUPLICATE_MPN_CONFLICT, SUSPECT_MPN_FORMAT, UOM_CONFLICT, DNP]}
+        message: {type: string}
+        field: {type: string}
+    BomLine:
+      type: object
+      properties:
+        id: {type: string}
+        line_no: {type: integer}
+        cpn: {type: [string, 'null']}
+        mpn_raw: {type: [string, 'null']}
+        mpn: {type: [string, 'null']}
+        manufacturer_raw: {type: [string, 'null']}
+        manufacturer: {type: [string, 'null']}
+        description: {type: [string, 'null']}
+        qty_per: {$ref: '#/components/schemas/Fact'}
+        uom: {type: string}
+        refdes: {type: array, items: {type: string}}
+        dnp: {type: boolean}
+        validation: {type: array, items: {$ref: '#/components/schemas/Issue'}}
+        match:
+          type: object
+          properties:
+            status: {$ref: '#/components/schemas/MatchStatus'}
+            component_id: {type: [string, 'null']}
+            confidence: {type: number}
+            candidates: {type: array, items: {type: string}}
+        selected_offer_id: {type: [string, 'null']}
+        substituted_from: {type: [string, 'null']}
+        overrides: {type: object}
+        version: {type: integer}
+    LineRow:
+      allOf:
+        - {$ref: '#/components/schemas/BomLine'}
+        - type: object
+          properties:
+            top_risk_severity: {oneOf: [{$ref: '#/components/schemas/Severity'}, {type: 'null'}]}
+            unit_price: {$ref: '#/components/schemas/Fact'}
+            extended_cost: {$ref: '#/components/schemas/Fact'}
+            lifecycle: {$ref: '#/components/schemas/Lifecycle'}
+    LinePage:
+      type: object
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/LineRow'}}
+        quality_tiles: {type: object, additionalProperties: {type: integer}}
+        next_cursor: {type: [string, 'null']}
+    LinePatch:
+      type: object
+      required: [changes, reason]
+      properties:
+        changes:
+          type: object
+          properties:
+            mpn: {type: string}
+            manufacturer: {type: string}
+            qty_per: {$ref: '#/components/schemas/Decimal'}
+            uom: {type: string}
+            dnp: {type: boolean}
+        reason: {type: string, minLength: 3}
+    LineDetail:
+      type: object
+      properties:
+        line: {$ref: '#/components/schemas/BomLine'}
+        offers: {type: array, items: {$ref: '#/components/schemas/Offer'}}
+        selected_offer: {oneOf: [{$ref: '#/components/schemas/Offer'}, {type: 'null'}]}
+        recommended: {$ref: '#/components/schemas/OfferRecommendation'}
+        risks: {type: array, items: {$ref: '#/components/schemas/Risk'}}
+        impact_by_volume: {type: array, items: {$ref: '#/components/schemas/LineImpact'}}
+        alternatives: {type: array, items: {$ref: '#/components/schemas/Alternative'}}
+        evidence_index: {type: object, additionalProperties: {$ref: '#/components/schemas/Evidence'}}
+
+    PriceBreak:
+      type: object
+      required: [qty, unit_price]
+      properties:
+        qty: {type: integer}
+        unit_price: {$ref: '#/components/schemas/Decimal'}
+    Component:
+      type: object
+      properties:
+        id: {type: string}
+        mpn: {type: string}
+        manufacturer: {type: string}
+        category: {type: string}
+        description: {type: string}
+        params: {type: object}
+        lifecycle: {$ref: '#/components/schemas/Lifecycle'}
+        ltb_date: {type: [string, 'null'], format: date}
+        datasheet_url: {type: [string, 'null']}
+    Offer:
+      type: object
+      properties:
+        id: {type: string}
+        line_id: {type: string}
+        distributor: {type: string}
+        sku: {type: string}
+        mpn: {type: string}
+        manufacturer: {type: string}
+        authorized: {type: boolean}
+        stock: {type: [integer, 'null']}
+        moq: {type: [integer, 'null']}
+        order_multiple: {type: [integer, 'null']}
+        packaging: {type: [string, 'null']}
+        lead_time_days: {type: [integer, 'null']}
+        lifecycle: {$ref: '#/components/schemas/Lifecycle'}
+        price_breaks: {type: array, items: {$ref: '#/components/schemas/PriceBreak'}}
+        currency: {type: string}
+        evidence_id: {type: string}
+        mode: {$ref: '#/components/schemas/SourceMode'}
+        fetched_at: {type: string, format: date-time}
+    OfferRecommendation:
+      type: object
+      properties:
+        offer_id: {type: [string, 'null']}
+        score: {type: number}
+        reasons: {type: array, items: {type: string}}
+        provenance: {const: RECOMMENDED}
+
+    Action:
+      type: object
+      properties:
+        type: {type: string, enum: [EDIT_LINE, SEARCH_ALTERNATIVES, SELECT_OFFER, CONFIRM_WITH_CUSTOMER, ACCEPT_RISK]}
+        label: {type: string}
+    Risk:
+      type: object
+      properties:
+        id: {type: string}
+        line_id: {type: [string, 'null']}
+        rule_id: {type: string, example: L01}
+        category: {$ref: '#/components/schemas/RiskCategory'}
+        severity: {$ref: '#/components/schemas/Severity'}
+        title: {type: string}
+        why: {type: string}
+        metrics: {type: object}
+        evidence_ids: {type: array, minItems: 1, items: {type: string}}
+        suggested_actions: {type: array, items: {$ref: '#/components/schemas/Action'}}
+        status: {$ref: '#/components/schemas/RiskStatus'}
+        resolution_note: {type: [string, 'null']}
+        narrative_source: {type: string, enum: [TEMPLATE, LLM]}
+        cost_exposure: {$ref: '#/components/schemas/Fact'}
+    RiskSummary:
+      type: object
+      properties:
+        by_severity: {type: object, additionalProperties: {type: integer}}
+        by_category: {type: object, additionalProperties: {type: integer}}
+        open_blockers: {type: integer}
+        spend_at_risk_pct: {$ref: '#/components/schemas/Fact'}
+
+    CalcStep:
+      type: object
+      properties:
+        label: {type: string}
+        formula: {type: string}
+        inputs: {type: object}
+        output: {$ref: '#/components/schemas/Fact'}
+    LineImpact:
+      type: object
+      properties:
+        line_id: {type: string}
+        volume: {type: integer}
+        required: {$ref: '#/components/schemas/Fact'}
+        scrap_pct: {$ref: '#/components/schemas/Fact'}
+        gross: {$ref: '#/components/schemas/Fact'}
+        net_need: {$ref: '#/components/schemas/Fact'}
+        buy_qty: {$ref: '#/components/schemas/Fact'}
+        excess_qty: {$ref: '#/components/schemas/Fact'}
+        shortage_qty: {$ref: '#/components/schemas/Fact'}
+        unit_price: {$ref: '#/components/schemas/Fact'}
+        extended: {$ref: '#/components/schemas/Fact'}
+        excess_cost: {$ref: '#/components/schemas/Fact'}
+        per_unit_cost: {$ref: '#/components/schemas/Fact'}
+        contribution_pct: {$ref: '#/components/schemas/Fact'}
+        trace: {type: array, items: {$ref: '#/components/schemas/CalcStep'}}
+    ImpactResult:
+      type: object
+      properties:
+        volume: {type: integer}
+        currency: {type: string}
+        totals:
+          type: object
+          properties:
+            material: {$ref: '#/components/schemas/Fact'}
+            scrap_cost: {$ref: '#/components/schemas/Fact'}
+            excess_cost: {$ref: '#/components/schemas/Fact'}
+            adders: {$ref: '#/components/schemas/Fact'}
+            grand_total: {$ref: '#/components/schemas/Fact'}
+        waterfall: {type: array, items: {type: object, properties: {label: {type: string}, value: {$ref: '#/components/schemas/Fact'}}}}
+        lines: {type: array, items: {$ref: '#/components/schemas/LineImpact'}}
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              line_id: {type: string}
+              kind: {type: string, enum: [PRICE_BREAK_JUMP, REDUCE_EXCESS, SWITCH_OFFER]}
+              message: {type: string}
+              saving: {$ref: '#/components/schemas/Fact'}
+
+    AttrCompare:
+      type: object
+      properties:
+        attribute: {type: string}
+        original: {type: [string, 'null']}
+        candidate: {type: [string, 'null']}
+        critical: {type: boolean}
+        result: {type: string, enum: [MATCH, WITHIN_TOLERANCE, MISMATCH, UNKNOWN]}
+    Alternative:
+      type: object
+      properties:
+        id: {type: string}
+        line_id: {type: string}
+        candidate_mpn: {type: string}
+        manufacturer: {type: string}
+        source: {type: string, enum: [NEXAR_SIMILAR, DIGIKEY_SUBSTITUTE, CATALOG_CROSSREF]}
+        fit_class: {type: string, enum: [DROP_IN, FUNCTIONAL, NOT_SUITABLE]}
+        comparison: {type: array, items: {$ref: '#/components/schemas/AttrCompare'}}
+        offers_summary: {type: object}
+        delta_cost: {$ref: '#/components/schemas/Fact'}
+        delta_lead_days: {$ref: '#/components/schemas/Fact'}
+        explanation: {type: string}
+        evidence_ids: {type: array, items: {type: string}}
+        status: {type: string, enum: [PROPOSED, APPROVED, REJECTED]}
+        decided_by: {type: [string, 'null']}
+        note: {type: [string, 'null']}
+
+    ChatMessage:
+      type: object
+      properties:
+        id: {type: string}
+        role: {type: string, enum: [user, assistant]}
+        content: {type: string}
+        citations: {type: array, items: {type: object, properties: {evidence_id: {type: string}, label: {type: string}}}}
+        tool_calls: {type: array, items: {type: object, properties: {name: {type: string}, args: {type: object}}}}
+        grounded: {type: [boolean, 'null']}
+        created_at: {type: string, format: date-time}
+
+    QuoteVersion:
+      type: object
+      properties:
+        version: {type: integer}
+        status: {type: string, enum: [DRAFT, FINALIZED]}
+        created_at: {type: string, format: date-time}
+        finalized_at: {type: [string, 'null'], format: date-time}
+        note: {type: [string, 'null']}
+        currency: {type: string}
+        volumes:
+          type: array
+          items:
+            type: object
+            properties:
+              volume: {type: integer}
+              material: {$ref: '#/components/schemas/Fact'}
+              adders: {$ref: '#/components/schemas/Fact'}
+              total: {$ref: '#/components/schemas/Fact'}
+              per_unit: {$ref: '#/components/schemas/Fact'}
+        assumptions: {$ref: '#/components/schemas/Assumptions'}
+        readiness:
+          type: object
+          properties:
+            ready: {type: boolean}
+            open_blockers: {type: array, items: {type: string}}
+            waived: {type: array, items: {type: string}}
+
+    AuditEvent:
+      type: object
+      properties:
+        id: {type: string}
+        actor_role: {type: string}
+        action: {type: string, example: RISK_WAIVED}
+        target: {type: string}
+        before: {type: object}
+        after: {type: object}
+        reason: {type: [string, 'null']}
+        at: {type: string, format: date-time}
