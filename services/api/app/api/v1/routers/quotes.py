@@ -1,5 +1,6 @@
 """Quote versions, finalize (human gate 4), XLSX export, and reopening for a new revision."""
 
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Response
@@ -55,7 +56,7 @@ async def export_quote(
     data = build_workbook(project, quote, risks)
     # Keep a copy for traceability; the bucket deletes exports/ after 7 days (free tier).
     await container.blobs.put(f"exports/{pid}/quote-v{version}.{file_format}", data, XLSX)
-    safe = "".join(ch if ch.isalnum() else "-" for ch in project.name)[:40].strip("-") or "quote"
+    safe = re.sub(r"[^A-Za-z0-9]+", "-", project.name)[:40].strip("-") or "quote"
     disposition = f'attachment; filename="{safe}-v{version}.xlsx"'
     return Response(content=data, media_type=XLSX, headers={"Content-Disposition": disposition})
 
