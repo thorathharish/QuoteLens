@@ -15,6 +15,7 @@ from app.domain.models import (
     Assumptions,
     BomLine,
     BomUpload,
+    ChatMessage,
     Component,
     LineImpact,
     Offer,
@@ -232,3 +233,19 @@ class AlternativeList(ApiModel):
 class DecisionResult(ApiModel):
     alternative: Alternative
     line: BomLine
+
+
+# ── Phase 6: copilot ─────────────────────────────────────────
+
+
+class ChatSessionCreate(ApiModel):
+    line_id: str | None = None
+    risk_id: str | None = None
+
+
+class ChatAsk(ApiModel):
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class ChatHistory(ApiModel):
+    items: list[ChatMessage]

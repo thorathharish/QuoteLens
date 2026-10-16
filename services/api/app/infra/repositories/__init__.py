@@ -7,6 +7,7 @@ from app.domain.models import (
     BomLine,
     BomUpload,
     ChatMessage,
+    ChatSession,
     Component,
     Job,
     Offer,
@@ -60,6 +61,9 @@ class Repositories:
 
     def quotes(self, project_id: str) -> TypedCollection[QuoteVersion]:
         return TypedCollection(self.store, ("projects", project_id, "quotes"), QuoteVersion)
+
+    def chat_sessions(self, project_id: str) -> TypedCollection[ChatSession]:
+        return TypedCollection(self.store, ("projects", project_id, "chat"), ChatSession)
 
     def chat_messages(self, project_id: str, session_id: str) -> TypedCollection[ChatMessage]:
         return TypedCollection(

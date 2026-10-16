@@ -47,9 +47,9 @@
 | 22 | `GET /projects/{pid}/alternatives` | Queue | `?line_id=&status=` → `{items: Alternative[{candidate_mpn, manufacturer, fit_class, comparison[{attribute, original, candidate, critical, result}], offers_summary, delta_cost, delta_lead_days, explanation, evidence_ids, status}]}` |
 | 23 | `POST /projects/{pid}/alternatives/{aid}/decision` | Approve/reject (gate 3; audited) | `{decision: APPROVE\|REJECT, note (required)}` → `{alternative, line}`. APPROVE creates a line version with `substituted_from` and re-sources it. `409` for a NOT_SUITABLE candidate. |
 | **Copilot** |||
-| 24 | `POST /projects/{pid}/chat/sessions` | New session | `{focus?{line_id?, risk_id?}}` → `{session_id}` |
-| 25 | `POST /projects/{pid}/chat/sessions/{sid}/messages` | Ask (SSE) | `{content}` → `text/event-stream`: `tool_start{name,args}` · `tool_end{name,evidence_ids}` · `token{text}` · `citations[{evidence_id,label}]` · `done{message_id, grounded: bool}` · `error{code}` |
-| 26 | `GET /projects/{pid}/chat/sessions/{sid}/messages` | History | → `Page<Message>` |
+| 24 | `POST /projects/{pid}/chat/sessions` | New session | `{line_id?, risk_id?}` (focus) → `201 ChatSession` |
+| 25 | `POST /projects/{pid}/chat/sessions/{sid}/messages` | Ask (SSE; rate-limited to 10/min per client) | `{content}` → `text/event-stream`: `tool_start{name,args}` · `tool_end{name}` · `token{text}` (streamed only **after** the grounding check) · `citations{items[{evidence_id,label}]}` · `done{message_id, grounded, unverified_numbers[]}` · `error{code,message}`. `503 LLM_UNAVAILABLE` without Gemini. |
+| 26 | `GET /projects/{pid}/chat/sessions/{sid}/messages` | History | → `{items: ChatMessage[{role, content, citations, tool_calls, grounded}]}` |
 | **Quotes** |||
 | 27 | `POST /projects/{pid}/quotes` | Snapshot version | `{note?}` → `201 QuoteVersion` (includes readiness) |
 | 28 | `GET /projects/{pid}/quotes` · `/{version}` | List / get | → `Page<QuoteSummary>` / `QuoteVersion` |

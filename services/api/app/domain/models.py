@@ -396,6 +396,13 @@ class AuditEvent(DomainModel):
     at: datetime = Field(default_factory=utcnow)
 
 
+class ChatSession(DomainModel):
+    id: str
+    focus_line_id: str | None = None
+    focus_risk_id: str | None = None
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 class Citation(DomainModel):
     evidence_id: str
     label: str

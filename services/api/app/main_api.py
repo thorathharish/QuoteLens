@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routers import (
     alternatives,
     bom,
+    copilot,
     insights,
     jobs,
     lines,
@@ -37,6 +38,7 @@ def _configure(app: FastAPI, settings: Settings) -> None:
         insights.router,
         risks.router,
         alternatives.router,
+        copilot.router,
     )
     for router in routers:
         app.include_router(router, prefix=API_PREFIX)
