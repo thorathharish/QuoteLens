@@ -28,7 +28,6 @@ QuoteLens turns a BOM into a quote you can defend. Every number carries a proven
 
 ### Reference code (`BuLLMQuote_SRIM-main`): borrow ideas, rewrite cleanly
 - **Borrow (re-implemented and tested):**
-  - Column-alias dictionary, header-row detection and refdes range expansion (`gerber-integration/bom_parser/parser.py`)
   - Unit normalization maps
   - LLM header-mapping pattern: fixed field list, null if unsure, deterministic rules override (`intake/bom_processing.py:111`)
   - Hierarchy quantity roll-up (`bom_processing.py:430-600`)
@@ -36,7 +35,6 @@ QuoteLens turns a BOM into a quote you can defend. Every number carries a proven
   - `select_price_for_qty`, `effective_moq` (`distributor-pricing/models.py`, `enrichment.py:36`)
   - Scrap tiers (`scrap_factor.py`)
   - The six-step excess chain (`queries.py:755-823`)
-  - Package attrition YAML (`package_map.yaml`)
   - DigiKey OAuth and Cut-Tape handling
   - Element14 status maps
   - Missing-Notes sections as a starting list of risk rules
@@ -51,6 +49,7 @@ QuoteLens turns a BOM into a quote you can defend. Every number carries a proven
   - f-string SQL
   - Committed secrets and customer data
   - Cheapest-price-only selection
+  - **Anything Gerber/PCB-related.** It is out of scope, and nothing from `gerber-integration/` is reused. Column aliases, header-row detection, refdes expansion and the package-attrition table are written fresh.
 
 ---
 

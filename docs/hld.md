@@ -75,13 +75,13 @@ stateDiagram-v2
 ### 2.6 Non-functional requirements
 | NFR | Target / approach |
 |---|---|
-| Demo reliability | Cloud Run min-instances=1 for web and api. Cache pre-warmed for the sample BOMs. Per-provider timeout of 4s plus a circuit breaker. LLM timeout with template fallback. A seeded "demo project" restorable with one click. |
+| Demo reliability | Cloud Run min-instances=1 for web and api **during the demo window only** (0 otherwise, to save free credits). Cache pre-warmed for the sample BOMs. Per-provider timeout of 4s plus a circuit breaker. LLM timeout with template fallback. A seeded "demo project" restorable with one click. |
 | Latency | Upload and mapping preview under 3s. 60-line BOM analysis under 30s in cache-first mode. First copilot token under 3s. |
 | Explainability | 100% of displayed numbers carry provenance. Every risk has at least one evidence item. Every copilot answer with numbers carries citations. |
 | Data integrity | Firestore transactions for overrides and decisions. Quote versions are immutable snapshots. Original files are kept in GCS with sha256. |
 | Security (no auth) | Secrets in Secret Manager. Nothing sensitive in the repo. CORS limited to the web origin. The api is called only through the web BFF; the worker accepts only Pub/Sub OIDC. Uploads capped at 5MB and limited to .xlsx/.csv/.tsv. Formulas are not evaluated (openpyxl `data_only`). BOM text is passed to the LLM as delimited data, never as instructions (prompt-injection guard). |
 | Observability | Structured JSON logs with `request_id`, `project_id` and `job_id`. LLM calls logged with model, latency and token counts. `/healthz` and `/readyz`. |
-| Cost | Gemini Flash by default. BigQuery queries batched per BOM (one `IN UNNEST(@mpns)` query). Scale-to-zero for the worker. |
+| Cost (**GCP free credits only**) | Stay within the Always Free tiers; Vertex AI Gemini is the only meaningful draw on the credit. Flash by default, with token caps, caching and an `LLM_ENABLED` kill switch. BigQuery queries batched per BOM (one `IN UNNEST(@mpns)` query) and loaded by load jobs. Everything scales to zero, with `max-instances` caps and budget alerts. No Dataflow, Cloud SQL, GKE or load balancers. See the [free-credit cost plan](implementation-plan.md#free-credit-cost-plan). |
 
 ### 2.7 Deployment view
 ```mermaid

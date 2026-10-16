@@ -4,7 +4,7 @@
 
 Built for **AI Builder Cup 2026**, Manufacturing: Intelligent Operations & Industrial Efficiency. Deployed on **Google Cloud**.
 
-> **Status:** Design phase. The architecture, HLD, LLD, user flows, competitor analysis and API contract are complete and under review. The implementation plan and code come next.
+> **Status:** Design approved; implementation starting. See the [implementation plan](docs/implementation-plan.md).
 
 ---
 
@@ -69,6 +69,7 @@ Everything is in [`docs/`](docs/README.md):
 | [Competitor Analysis](docs/competitor-analysis.md) | Market landscape and differentiation |
 | [API Contract](docs/api-contract.md) · [OpenAPI](docs/openapi.yaml) | 35 endpoints, error model, SSE copilot stream |
 | [ADRs](docs/adr/) | Architecture decision records |
+| [Implementation Plan](docs/implementation-plan.md) | Phases 0–9, milestones, team tracks, cut list, verification |
 
 ## Repository layout (planned)
 ```

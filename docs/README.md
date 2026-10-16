@@ -12,7 +12,7 @@ Built for AI Builder Cup 2026, Manufacturing: Intelligent Operations & Industria
 | 5 | Competitor analysis and differentiation | [competitor-analysis.md](competitor-analysis.md) |
 | 6 | API contract | [api-contract.md](api-contract.md) · [openapi.yaml](openapi.yaml) |
 | — | Architecture decision records | [adr/](adr/) |
-| 7 | Implementation plan | *after design sign-off* |
+| 7 | Implementation plan (phases, milestones, team tracks) | [implementation-plan.md](implementation-plan.md) |
 
 ## Capability → design traceability
 | Capability | Module | Endpoints (api-contract #) | User flow |
