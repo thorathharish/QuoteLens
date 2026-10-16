@@ -3,8 +3,11 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+from langchain_core.language_models import BaseChatModel
+
 from app.alternatives.service import AlternativesJob, AlternativesService
 from app.config import BlobBackend, CatalogBackend, JobBackend, Settings, StorageBackend
+from app.copilot.service import CopilotService
 from app.domain.enums import JobType
 from app.infra.blobstore import BlobStore, GcsBlobStore, InMemoryBlobStore
 from app.infra.jobbus import InlineJobBus, PubSubJobBus
@@ -40,6 +43,7 @@ class Container:
     review: SourcingReview
     insights: InsightService
     alternatives: AlternativesService
+    copilot: CopilotService
 
 
 def build_store(settings: Settings) -> DocumentStore:
@@ -82,6 +86,7 @@ def build_container(
     blobs: BlobStore | None = None,
     header_mapper: HeaderMapper | None = None,
     offer_chain: OfferSourceChain | None = None,
+    copilot_model: BaseChatModel | None = None,
 ) -> Container:
     repos = Repositories(store or build_store(settings))
     blob_store = blobs or build_blobs(settings)
@@ -113,6 +118,14 @@ def build_container(
         model=build_chat_model(settings, ModelTier.PRO, max_output_tokens=300),
     )
     dispatcher.register(JobType.ALTERNATIVES, AlternativesJob(alternatives))
+    copilot = CopilotService(
+        repos=repos,
+        insights=insights,
+        model=copilot_model
+        if copilot_model is not None
+        else build_chat_model(settings, ModelTier.FLASH),
+        max_tool_calls=settings.copilot_max_tool_calls,
+    )
     dispatcher.register(
         JobType.ANALYSIS,
         AnalysisPipeline(repos=repos, ingestion=ingestion, sourcing=sourcing, insights=insights),
@@ -128,4 +141,5 @@ def build_container(
         review=SourcingReview(repos=repos, sourcing=sourcing, insights=insights),
         insights=insights,
         alternatives=alternatives,
+        copilot=copilot,
     )

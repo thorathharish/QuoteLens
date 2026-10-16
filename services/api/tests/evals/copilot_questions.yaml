@@ -1,0 +1,35 @@
+# Copilot evaluation set (run manually against real Gemini: scripts/run_copilot_eval.py).
+# Pass criteria per question: the expected tools are called, the answer is grounded
+# (no unverified numbers), and at least `min_citations` evidence ids are cited.
+# Target: at least 8 of 10 pass on the hero BOM (motor_controller.xlsx).
+- question: Which parts block this quote and why?
+  expect_tools: [list_risks]
+  min_citations: 2
+- question: Why is A1101ELHLT-T risky and is there a replacement?
+  expect_tools: [get_line]
+  min_citations: 1
+- question: Which parts threaten a delivery in 8 weeks?
+  expect_tools: [list_risks]
+  min_citations: 1
+- question: Compare the distributor offers for INA240A1PWR.
+  expect_tools: [get_offers]
+  min_citations: 2
+- question: What is the total cost for 1000 boards and how much of it is MOQ excess?
+  expect_tools: [get_impact]
+  min_citations: 0
+- question: What happens to the 1000-board cost if scrap on SRP1265A-220M is zero?
+  expect_tools: [simulate]
+  min_citations: 0
+- question: Why was this distributor recommended for DRV8323RSRGZR?
+  expect_tools: [get_line]
+  min_citations: 1
+- question: Which lines have data problems I must fix before quoting?
+  expect_tools: [search_lines]
+  min_citations: 1
+- question: What is the current lead time for the STM32 and is it single-sourced?
+  expect_tools: [get_offers]
+  min_citations: 1
+- question: What is the price of a part that is not in this BOM, like LM317T?
+  expect_tools: []
+  min_citations: 0
+  expect_text: Not available in project data
