@@ -4,7 +4,7 @@
 
 Built for **AI Builder Cup 2026**, Manufacturing: Intelligent Operations & Industrial Efficiency. Deployed on **Google Cloud**.
 
-> **Status:** Design approved; implementation starting. See the [implementation plan](docs/implementation-plan.md).
+> **Status:** Feature-complete (Phases 0–8, live distributor data, deployment code). Deployment to GCP is pending the free-trial project; see the open `needs-real-env` issues.
 
 ---
 
@@ -70,6 +70,7 @@ Everything is in [`docs/`](docs/README.md):
 | [API Contract](docs/api-contract.md) · [OpenAPI](docs/openapi.yaml) | 35 endpoints, error model, SSE copilot stream |
 | [ADRs](docs/adr/) | Architecture decision records |
 | [Implementation Plan](docs/implementation-plan.md) | Phases 0–9, milestones, team tracks, cut list, verification |
+| [Demo runbook](docs/demo-runbook.md) | 6-minute walkthrough, pre-demo checklist, fallbacks |
 
 ## Repository layout (planned)
 ```
@@ -94,7 +95,12 @@ uv run pytest
 cd apps/web && pnpm install && pnpm dev                    # http://localhost:3000
 ```
 
-**GCP (free credits):** run `PROJECT_ID=<id> ./infra/bootstrap.sh` once. It enables the APIs and creates service accounts, Firestore, the bucket, the BigQuery datasets, Pub/Sub, Artifact Registry and a budget alert. See [`infra/cost-check.md`](infra/cost-check.md) and `infra/teardown.sh`. Deployment scripts arrive with Phase 9a.
+**Deploy to GCP (free credits)**, from the repo root in Git Bash, in this order:
+1. `PROJECT_ID=<id> BILLING_ACCOUNT=<id> BUDGET_CURRENCY=<USD|INR> ./infra/bootstrap.sh` (once): enables the APIs and creates service accounts, Firestore, the bucket, BigQuery, Pub/Sub, Artifact Registry and budget alerts.
+2. `cd services/api && uv run python scripts/load_catalog.py --project <id>` (optional, for `CATALOG_BACKEND=bigquery`).
+3. `PROJECT_ID=<id> ./infra/secrets.sh`: copies the distributor keys from `services/api/.env` to Secret Manager.
+4. `PROJECT_ID=<id> ./infra/deploy.sh`: builds both images with Cloud Build and deploys web (public), api and worker (private), plus the Pub/Sub push subscription.
+5. Demo day: `./infra/demo-mode.sh on|off` and the [demo runbook](docs/demo-runbook.md). Afterwards: `./infra/teardown.sh`. Daily: [`infra/cost-check.md`](infra/cost-check.md).
 
 ## Team
 Team **miscellaneous**, AI Builder Cup 2026.

@@ -13,6 +13,7 @@ Built for AI Builder Cup 2026, Manufacturing: Intelligent Operations & Industria
 | 6 | API contract | [api-contract.md](api-contract.md) · [openapi.yaml](openapi.yaml) |
 | — | Architecture decision records | [adr/](adr/) |
 | 7 | Implementation plan (phases, milestones, team tracks) | [implementation-plan.md](implementation-plan.md) |
+| — | Demo runbook (walkthrough, checklist, fallbacks) | [demo-runbook.md](demo-runbook.md) |
 
 ## Capability → design traceability
 | Capability | Module | Endpoints (api-contract #) | User flow |
