@@ -8,11 +8,13 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.catalog.rows import CatalogComponent, CatalogOffer
+from app.demo.service import Scenario
 from app.domain.enums import BomField, DataMode, MappingMethod, ProjectStatus, RiskStatus
 from app.domain.facts import Evidence, Fact
 from app.domain.models import (
     Alternative,
     Assumptions,
+    AuditEvent,
     BomLine,
     BomUpload,
     ChatMessage,
@@ -21,6 +23,7 @@ from app.domain.models import (
     Offer,
     OfferRecommendation,
     Project,
+    QuoteVersion,
     Risk,
 )
 from app.impact.models import ImpactResult
@@ -249,3 +252,49 @@ class ChatAsk(ApiModel):
 
 class ChatHistory(ApiModel):
     items: list[ChatMessage]
+
+
+# -- Phase 7: quotes, review, audit, demo --
+
+
+class QuoteCreate(ApiModel):
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class QuoteFinalize(ApiModel):
+    note: str = Field(min_length=3, max_length=1000)
+
+
+class QuoteList(ApiModel):
+    items: list[QuoteVersion]
+
+
+class ReopenRequest(ApiModel):
+    reason: str = Field(min_length=3, max_length=1000)
+
+
+class LineChangesIn(ApiModel):
+    mpn: str | None = Field(default=None, min_length=1, max_length=64)
+    manufacturer: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
+    qty_per: Decimal | None = Field(default=None, gt=0)
+    uom: str | None = Field(default=None, max_length=10)
+    dnp: bool | None = None
+
+
+class LinePatch(ApiModel):
+    changes: LineChangesIn
+    reason: str = Field(min_length=3, max_length=1000)
+
+
+class AuditList(ApiModel):
+    items: list[AuditEvent]
+
+
+class DemoSeed(ApiModel):
+    scenario: Scenario = Scenario.MOTOR_CONTROLLER
+
+
+class DemoSeeded(ApiModel):
+    project_id: str
+    job_id: str

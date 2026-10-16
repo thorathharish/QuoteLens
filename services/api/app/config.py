@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     blob_backend: BlobBackend = BlobBackend.MEMORY
     catalog_backend: CatalogBackend = CatalogBackend.SEED
     catalog_seed_dir: Path = Path(__file__).resolve().parents[3] / "data" / "catalog_seed"
+    samples_dir: Path = Path(__file__).resolve().parents[3] / "data" / "samples"
     job_backend: JobBackend = JobBackend.INLINE
     data_mode: DataMode = DataMode.CACHE_FIRST
 
