@@ -14,6 +14,7 @@ from app.ingestion.column_mapper import GeminiHeaderMapper, HeaderMapper
 from app.ingestion.service import IngestionService
 from app.jobs.analysis import AnalysisPipeline
 from app.jobs.dispatcher import JobDispatcher
+from app.risk.service import InsightService
 from app.sourcing.chain import OfferSourceChain
 from app.sourcing.providers.catalog import BigQueryCatalogProvider, SeedCatalogProvider
 from app.sourcing.review import SourcingReview
@@ -36,6 +37,7 @@ class Container:
     ingestion: IngestionService
     sourcing: SourcingService
     review: SourcingReview
+    insights: InsightService
 
 
 def build_store(settings: Settings) -> DocumentStore:
@@ -99,8 +101,10 @@ def build_container(
         header_mapper=header_mapper or build_header_mapper(settings),
     )
     sourcing = SourcingService(repos=repos, chain=offer_chain or build_offer_chain(settings))
+    insights = InsightService(repos=repos)
     dispatcher.register(
-        JobType.ANALYSIS, AnalysisPipeline(repos=repos, ingestion=ingestion, sourcing=sourcing)
+        JobType.ANALYSIS,
+        AnalysisPipeline(repos=repos, ingestion=ingestion, sourcing=sourcing, insights=insights),
     )
     return Container(
         settings=settings,
@@ -110,5 +114,6 @@ def build_container(
         job_bus=job_bus,
         ingestion=ingestion,
         sourcing=sourcing,
-        review=SourcingReview(repos=repos, sourcing=sourcing),
+        review=SourcingReview(repos=repos, sourcing=sourcing, insights=insights),
+        insights=insights,
     )

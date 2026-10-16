@@ -16,6 +16,7 @@ from app.infra.repositories import Repositories
 from app.ingestion.parse import ParsedBom, parse_rows
 from app.ingestion.service import IngestionService
 from app.jobs.dispatcher import JobContext
+from app.risk.service import InsightService
 from app.sourcing.service import SourcingService
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ class AnalysisPipeline:
     repos: Repositories
     ingestion: IngestionService
     sourcing: SourcingService
+    insights: InsightService
 
     async def __call__(self, job: Job, ctx: JobContext) -> None:
         project = await self.repos.projects.get(job.project_id)
@@ -64,9 +66,10 @@ class AnalysisPipeline:
         project.stats.data_issues = dict(
             Counter(issue.code for line in all_lines for issue in line.validation)
         )
-        project.status = ProjectStatus.IN_REVIEW
-        project.updated_at = utcnow()
         await self.repos.projects.put(project)
+
+        await ctx.progress("impact_and_risk", 85)
+        await self.insights.refresh(project.id)  # also sets IN_REVIEW / QUOTE_READY
 
     async def _ingest(self, project: Project, upload_id: str, ctx: JobContext) -> None:
         upload = await self.repos.uploads(project.id).get(upload_id)

@@ -400,7 +400,10 @@ def _expected(
         "seeded_rows": seeded,
         "unseeded_rows_expectation": "MATCHED with no data issues and no seeded risks",
         "totals": None,
-        "_totals_note": "Per-volume totals are frozen in Phase 4, once the impact engine exists.",
+        "_totals_note": (
+            "Per-volume totals and the full risk list are frozen in "
+            "services/api/tests/golden/motor_controller.json."
+        ),
     }
     return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
 

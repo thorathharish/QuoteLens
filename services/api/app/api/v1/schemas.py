@@ -2,15 +2,17 @@
 shape is already the public contract; internal fields are excluded explicitly."""
 
 from datetime import date
+from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.catalog.rows import CatalogComponent, CatalogOffer
-from app.domain.enums import BomField, DataMode, MappingMethod
-from app.domain.facts import Evidence
+from app.domain.enums import BomField, DataMode, MappingMethod, ProjectStatus, RiskStatus
+from app.domain.facts import Evidence, Fact
 from app.domain.models import (
     Alternative,
+    Assumptions,
     BomLine,
     BomUpload,
     Component,
@@ -20,6 +22,8 @@ from app.domain.models import (
     Project,
     Risk,
 )
+from app.impact.models import ImpactResult
+from app.risk.engine import RiskSummary
 
 
 class ApiModel(BaseModel):
@@ -141,3 +145,69 @@ class ComponentLookup(ApiModel):
     offers: list[CatalogOffer]
     suggestions: list[str]
     warnings: list[str]
+
+
+# ── Phase 4: overview, impact, risks ─────────────────────────
+
+
+class VolumeTotal(ApiModel):
+    volume: int
+    material: Fact[Decimal]
+    total: Fact[Decimal]
+    per_unit: Fact[Decimal]
+
+
+class NextAction(ApiModel):
+    label: str
+    risk_id: str | None = None
+    line_id: str | None = None
+
+
+class Overview(ApiModel):
+    project_id: str
+    status: ProjectStatus
+    data_mode: DataMode
+    currency: str
+    lines: int
+    matched: int
+    unpriced_lines: int
+    totals_by_volume: list[VolumeTotal]
+    risks: RiskSummary
+    next_actions: list[NextAction]
+
+
+class RiskList(ApiModel):
+    summary: RiskSummary
+    items: list[Risk]
+
+
+class RiskDetail(ApiModel):
+    risk: Risk
+    evidence: dict[str, Evidence]
+
+
+class RiskReview(ApiModel):
+    status: RiskStatus
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class LineOverrideIn(ApiModel):
+    line_id: str
+    scrap_pct: Decimal | None = Field(default=None, ge=0, le=1)
+    offer_id: str | None = None
+    qty_per: Decimal | None = Field(default=None, gt=0)
+    on_hand: int | None = Field(default=None, ge=0)
+
+
+class SimulationRequest(ApiModel):
+    volume: int = Field(ge=1, le=10_000_000)
+    overrides: list[LineOverrideIn] = Field(default=[], max_length=500)
+
+
+class SimulationResult(ApiModel):
+    baseline: ImpactResult
+    simulated: ImpactResult
+    delta: Fact[Decimal]
+
+
+AssumptionsBody = Assumptions
