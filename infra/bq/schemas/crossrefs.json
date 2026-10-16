@@ -1,0 +1,9 @@
+[
+  {"name": "mpn_norm", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "alt_mpn_norm", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "alt_mpn", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "alt_manufacturer", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "relation", "type": "STRING", "mode": "REQUIRED", "description": "FFF | FUNCTIONAL | UPGRADE"},
+  {"name": "source", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "note", "type": "STRING", "mode": "NULLABLE"}
+]
