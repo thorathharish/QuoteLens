@@ -12,6 +12,7 @@ from app.infra.repositories import Filter, Repositories
 from app.ingestion.normalize import normalize_manufacturer
 from app.ingestion.service import ensure_not_busy
 from app.ingestion.validate import revalidate
+from app.risk.service import InsightService
 from app.sourcing.service import SELECTED_OFFER_OVERRIDE, SourcingService
 
 
@@ -19,6 +20,7 @@ from app.sourcing.service import SELECTED_OFFER_OVERRIDE, SourcingService
 class SourcingReview:
     repos: Repositories
     sourcing: SourcingService
+    insights: InsightService
 
     async def set_mpn(
         self,
@@ -50,6 +52,7 @@ class SourcingReview:
         )
         await self.repos.lines(project_id).put(edited)
         await self.sourcing.source(project, [edited])
+        await self.insights.refresh(project_id)
         await self._audit(
             project_id,
             role,
@@ -85,6 +88,7 @@ class SourcingReview:
             )
         updated = line.model_copy(update={"selected_offer_id": offer_id, "overrides": overrides})
         await self.repos.lines(project_id).put(updated)
+        await self.insights.refresh(project_id)
         await self._audit(
             project_id,
             role,

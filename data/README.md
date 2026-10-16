@@ -48,4 +48,4 @@ The UI shows `DEMO_SNAPSHOT` on every value from this catalog. When distributor 
 | J2 | 0430450200 | Quantity "TBD" | **D04 blocker** |
 | F1 | *(none)* | No MPN | **D01 blocker** |
 
-The three blockers drive the demo's "readiness" story. Per-volume totals are frozen in Phase 4, once the impact engine exists.
+The three blockers drive the demo's "readiness" story. Per-volume totals and the full risk list are frozen in [`services/api/tests/golden/motor_controller.json`](../services/api/tests/golden/motor_controller.json); regenerate with `UPDATE_GOLDEN=1 uv run pytest tests/unit/test_insights_api.py` after an intended change, and review the diff.

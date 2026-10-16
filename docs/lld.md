@@ -137,18 +137,24 @@ Each step appends a `CalcStep{label, formula, inputs, output}`, which renders as
 | L02 | NRND / LTB (LTB date < target + 90 days) | HIGH | lifecycle, LTB date |
 | S01 | Stock across authorized sources < buy qty | HIGH | offers |
 | S02 | Single authorized source | MEDIUM | offers |
-| S03 | Lead time > days until target ship date, when stock can't cover the buy quantity | HIGH | offer lead time, stock |
+| S03 | Lead time > days until target ship date (or an explicit, assumed 84-day horizon when no target is set), when the selected offer's stock can't cover the buy quantity | HIGH | offer lead time, stock |
 | S04 | No authorized source (broker only) | HIGH | offers |
 | P01 | Price spread > 40% vs cross-source median | MEDIUM | offers |
-| P02 | BOM-provided price deviates > 25% from market | MEDIUM | BOM cell + offer |
+| P02 | Customer target price > 25% **below** the selected market price (a target above market is not a quoting risk) | MEDIUM | BOM cell + offer |
 | P03 | MOQ excess cost > 20% of line cost | MEDIUM | impact trace |
 | P04 | Price data stale: LIVE/CACHE offer older than 7 days. DEMO_SNAPSHOT data is disclosed globally (data-mode chip and badges), not flagged per line | LOW | fetched_at |
-| P05 | No price for the required quantity | HIGH | price breaks |
+| P05 | Matched and offered, but no offer can be priced for the order (skipped when the quantity is invalid: D04 explains that) | HIGH | price breaks |
 | Q01 | Line > 15% of BOM cost (concentration) | LOW | impact |
 
 - `why` comes from a deterministic template filled with metrics.
-- The narrator (Gemini Flash) may rephrase it but receives only the rule output JSON. A validator rejects any narrative containing numbers absent from the metrics.
-- BOM-level output: readiness = no OPEN blockers. Also produced: spend-at-risk %, counts by category and severity, and the top-5 risks by cost exposure.
+- Rules are evaluated at the **primary** (first) build quantity; impact is computed for every volume.
+- Risk ids are deterministic (`rsk_<rule>_<line>`), so a user's review (ACKNOWLEDGED, RESOLVED, WAIVED) carries over to re-runs while the risk still applies. Risks whose condition disappears (e.g. a fixed MPN) are removed. Waiving requires a note, and every review is audited.
+- The narrator (Gemini Flash, P1, deferred) may rephrase the template but receives only the rule output JSON. A validator rejects any narrative containing numbers absent from the metrics.
+- BOM-level output:
+  - **ready** = no unresolved (OPEN or ACKNOWLEDGED) BLOCKER. This drives the project status: `QUOTE_READY` or `IN_REVIEW`.
+  - **readiness %** = lines without unresolved BLOCKER/HIGH risks ÷ costed lines.
+  - **spend at risk** = cost of those lines ÷ material total.
+  - Also counts by severity and category, and the top-5 risks by cost exposure.
 
 **Alternatives (LangGraph sub-graph)**
 `gather_candidates` (Nexar similarParts, DigiKey substitutions, BQ crossrefs) → `fetch_offers` → `compare` (deterministic param diff by category: package/footprint, value, tolerance, voltage/current rating, temp range, lifecycle, RoHS) → `classify` (DROP_IN if all critical params match; FUNCTIONAL if critical params are within tolerance rules; else NOT_SUITABLE) → `explain` (Gemini Pro sees only the comparison table and offers) → saved as PROPOSED.

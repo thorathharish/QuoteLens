@@ -52,7 +52,7 @@ ignore = [
     "UP046",  # pydantic generic models use Generic[T]
     "UP047",
 ]
-allowed-confusables = ["×"]  # used deliberately in human-readable formulas
+allowed-confusables = ["×", "−", "÷", "Σ", "≥"]  # deliberate, in user-facing formulas
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "N802", "TID251"]

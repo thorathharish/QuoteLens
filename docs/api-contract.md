@@ -20,8 +20,8 @@
 | **Projects** |||
 | 1 | `POST /projects` | Create | `{name, customer?, currency, build_quantities:[int], target_ship_date?, data_mode?}` → `201 Project` |
 | 2 | `GET /projects` · `GET /projects/{pid}` · `DELETE /projects/{pid}` | List / get / delete | → `Page<ProjectSummary>` / `Project` / `204` |
-| 3 | `GET /projects/{pid}/overview` | Readiness and KPIs | → `{status, readiness{pct, open_blockers}, totals_by_volume[Fact], risks_by_severity, spend_at_risk_pct, next_actions[]}` |
-| 4 | `PUT /projects/{pid}/assumptions` | Scrap, FX, adders | `{scrap_policy, fx_overrides, adders{assembly_per_unit?, nre?, overhead_pct?, margin_pct?}}` → `Assumptions` |
+| 3 | `GET /projects/{pid}/overview` | Readiness and KPIs | → `{status, data_mode, currency, lines, matched, unpriced_lines, totals_by_volume[{volume, material, total, per_unit}: Fact], risks: RiskSummary{by_severity, unresolved_by_severity, open_blockers, ready, readiness_pct, spend_at_risk_pct, top_exposure}, next_actions[{label, risk_id, line_id}]}` |
+| 4 | `GET`/`PUT /projects/{pid}/assumptions` | Scrap policy, FX, adders (audited; re-computes impact and risks) | `{scrap_policy{mode: price_tier\|package\|fixed, fixed_pct, tiers[]}, fx_overrides{"USD->INR": rate}, adders{assembly_per_unit, nre, overhead_pct, margin_pct}}` → `Assumptions` |
 | **BOM ingestion** |||
 | 5 | `POST /projects/{pid}/bom` | Upload (multipart `file`) | → `200 {upload_id, filename, sheets[], selected_sheet, header_row (1-based), data_rows, proposed_mapping[{column_index, header, field, confidence, method: ALIAS\|LLM\|USER\|NONE, reason}], preview_rows[][], unmapped[], warnings[]}` |
 | 6 | `PUT /projects/{pid}/bom/mapping` | Confirm mapping (gate 1) | `{upload_id, mapping[{column_index, field\|null}] (overrides only), sheet?, header_row?}` → `202 {job_id}` (parse, validate, then analysis). `422` lists missing required columns. |
@@ -36,12 +36,12 @@
 | 14 | `PUT /projects/{pid}/lines/{lid}/selected-offer` | Override selection | `{offer_id, reason}` → `LineDetail` |
 | 15 | `GET /components/lookup` | Ad-hoc part lookup | `?mpn=&mode=` → `{mpn, component, offers[], suggestions[], warnings[]}` |
 | **Risks** |||
-| 16 | `GET /projects/{pid}/risks` | List | `?status=&severity=&category=&line_id=` → `{summary, items: Page<Risk>}` |
-| 17 | `GET /projects/{pid}/risks/{rid}` | Detail plus evidence | → `Risk & {evidence[]}` |
+| 16 | `GET /projects/{pid}/risks` | List | `?status=&severity=&category=&line_id=` → `{summary: RiskSummary, items: Risk[]}` (sorted by severity, then cost exposure) |
+| 17 | `GET /projects/{pid}/risks/{rid}` | Detail plus evidence | → `{risk, evidence{id→Evidence}}` |
 | 18 | `PATCH /projects/{pid}/risks/{rid}` | Review (gate 2) | `{status: ACKNOWLEDGED\|RESOLVED\|WAIVED, note}` (note required for WAIVED) → `Risk` |
 | **Impact** |||
-| 19 | `GET /projects/{pid}/impact` | Per volume | `?volume=1000` → `{volume, totals{material, scrap_cost, excess_cost, adders, grand_total}[Fact], waterfall[], lines[LineImpact], recommendations[]}` |
-| 20 | `POST /projects/{pid}/impact/simulate` | What-if (not saved) | `{volume, overrides[{line_id, scrap_pct?, offer_id?, qty_per?, on_hand?}]}` → `ImpactResult & {delta_vs_baseline}` |
+| 19 | `GET /projects/{pid}/impact` | Per volume (default: primary) | `?volume=` → `{volume, currency, totals{required_material, scrap_cost, excess_cost, material, adders, grand_total, per_unit}: Fact, waterfall[], lines[LineImpact with trace], recommendations[PRICE_BREAK_JUMP], unpriced_line_ids[]}` |
+| 20 | `POST /projects/{pid}/impact/simulate` | What-if (never saved) | `{volume, overrides[{line_id, scrap_pct?, offer_id?, qty_per?, on_hand?}]}` → `{baseline, simulated, delta: Fact}` |
 | **Alternatives** |||
 | 21 | `POST /projects/{pid}/lines/{lid}/alternatives/search` | Investigate | `{reason?, constraints?{same_package?:bool, max_lead_days?}}` → `202 {job_id}` |
 | 22 | `GET /projects/{pid}/alternatives` | Queue | `?line_id=&status=` → `Page<Alternative>` |
