@@ -1,0 +1,78 @@
+# ── Secrets & credentials (never commit) ─────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*service-account*.json
+*credentials*.json
+application_default_credentials.json
+secrets/
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# ── Node / Next.js ───────────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ── Testing / E2E ────────────────────────────────────────────
+playwright-report/
+test-results/
+blob-report/
+
+# ── GCP / infra local state ──────────────────────────────────
+.terraform/
+*.tfstate
+*.tfstate.*
+.firebase/
+firebase-debug.log
+firestore-debug.log
+pubsub-debug.log
+
+# ── Runtime data (uploads/exports are generated, not source) ─
+uploads/
+exports/
+tmp/
+*.log
+
+# ── Local AI-agent / editor tooling ──────────────────────────
+.claude/
+.agents/
+.kilo/
+skills-lock.json
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
