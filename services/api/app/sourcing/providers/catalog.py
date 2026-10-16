@@ -55,6 +55,9 @@ class SeedCatalogProvider:
     async def suggest(self, mpn: str, limit: int = 3) -> list[str]:
         return _suggest(mpn, list(self.components), limit)
 
+    async def alternates(self, mpn: str) -> list[CatalogCrossRef]:
+        return [ref for ref in self.crossrefs if ref.mpn_norm == mpn]
+
 
 def _read[M: (CatalogComponent, CatalogOffer, CatalogCrossRef)](
     path: Path, model: type[M]
@@ -134,6 +137,15 @@ class BigQueryCatalogProvider:
             )
             self._keys = (now, [row["mpn_norm"] for row in rows])
         return _suggest(mpn, self._keys[1], limit)
+
+    async def alternates(self, mpn: str) -> list[CatalogCrossRef]:
+        sql = (
+            "SELECT mpn_norm, alt_mpn_norm, alt_mpn, alt_manufacturer, relation, source, note "  # noqa: S608
+            f"FROM {self._prefix}.crossrefs WHERE mpn_norm = @mpn"
+        )
+        params = [self._bq.ScalarQueryParameter("mpn", "STRING", mpn)]
+        rows = await asyncio.to_thread(self._query, sql, params)
+        return [CatalogCrossRef.model_validate(row) for row in rows]
 
 
 def _component_row(row: dict[str, Any]) -> dict[str, Any]:

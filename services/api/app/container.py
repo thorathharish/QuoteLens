@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+from app.alternatives.service import AlternativesJob, AlternativesService
 from app.config import BlobBackend, CatalogBackend, JobBackend, Settings, StorageBackend
 from app.domain.enums import JobType
 from app.infra.blobstore import BlobStore, GcsBlobStore, InMemoryBlobStore
@@ -38,6 +39,7 @@ class Container:
     sourcing: SourcingService
     review: SourcingReview
     insights: InsightService
+    alternatives: AlternativesService
 
 
 def build_store(settings: Settings) -> DocumentStore:
@@ -63,10 +65,10 @@ def build_offer_chain(settings: Settings) -> OfferSourceChain:
         bq = BigQueryCatalogProvider(
             settings.gcp_project, settings.bq_catalog_dataset, settings.gcp_region
         )
-        return OfferSourceChain(catalog=bq, search=bq)
+        return OfferSourceChain(catalog=bq, search=bq, crossrefs=bq)
     seed = SeedCatalogProvider(settings.catalog_seed_dir)
     # Live distributor adapters (P1, issue-tracked) plug into `live=` here.
-    return OfferSourceChain(catalog=seed, search=seed)
+    return OfferSourceChain(catalog=seed, search=seed, crossrefs=seed)
 
 
 def build_header_mapper(settings: Settings) -> HeaderMapper | None:
@@ -102,6 +104,15 @@ def build_container(
     )
     sourcing = SourcingService(repos=repos, chain=offer_chain or build_offer_chain(settings))
     insights = InsightService(repos=repos)
+    chain = sourcing.chain
+    alternatives = AlternativesService(
+        repos=repos,
+        chain=chain,
+        sourcing=sourcing,
+        insights=insights,
+        model=build_chat_model(settings, ModelTier.PRO, max_output_tokens=300),
+    )
+    dispatcher.register(JobType.ALTERNATIVES, AlternativesJob(alternatives))
     dispatcher.register(
         JobType.ANALYSIS,
         AnalysisPipeline(repos=repos, ingestion=ingestion, sourcing=sourcing, insights=insights),
@@ -116,4 +127,5 @@ def build_container(
         sourcing=sourcing,
         review=SourcingReview(repos=repos, sourcing=sourcing, insights=insights),
         insights=insights,
+        alternatives=alternatives,
     )

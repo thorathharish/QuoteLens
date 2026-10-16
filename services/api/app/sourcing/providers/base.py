@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from app.catalog.rows import CatalogComponent, CatalogOffer
+from app.catalog.rows import CatalogComponent, CatalogCrossRef, CatalogOffer
 
 
 @dataclass
@@ -34,4 +34,10 @@ class OfferProvider(Protocol):
 class CatalogSearch(Protocol):
     async def suggest(self, mpn: str, limit: int = 3) -> list[str]:
         """Known MPNs that closely resemble `mpn` (typos, missing suffixes)."""
+        ...
+
+
+class CrossRefSource(Protocol):
+    async def alternates(self, mpn: str) -> list[CatalogCrossRef]:
+        """Curated alternates known for a part (form-fit-function or functional)."""
         ...

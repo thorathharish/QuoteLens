@@ -12,7 +12,12 @@ import logging
 from collections.abc import Sequence
 
 from app.domain.enums import DataMode
-from app.sourcing.providers.base import CatalogSearch, OfferProvider, ProviderResult
+from app.sourcing.providers.base import (
+    CatalogSearch,
+    CrossRefSource,
+    OfferProvider,
+    ProviderResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +28,11 @@ class OfferSourceChain:
         catalog: OfferProvider,
         search: CatalogSearch,
         live: Sequence[OfferProvider] = (),
+        crossrefs: CrossRefSource | None = None,
     ) -> None:
         self.catalog = catalog
         self.search = search
+        self.crossrefs = crossrefs
         self.live = list(live)
 
     async def fetch(self, mpns: Sequence[str], mode: DataMode) -> ProviderResult:
