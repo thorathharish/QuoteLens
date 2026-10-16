@@ -1,0 +1,21 @@
+[
+  {"name": "mpn_norm", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "distributor", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "sku", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "manufacturer", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "stock", "type": "INT64", "mode": "NULLABLE"},
+  {"name": "moq", "type": "INT64", "mode": "REQUIRED"},
+  {"name": "mult", "type": "INT64", "mode": "REQUIRED"},
+  {"name": "lead_days", "type": "INT64", "mode": "NULLABLE"},
+  {"name": "packaging", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "price_breaks", "type": "RECORD", "mode": "REPEATED", "fields": [
+    {"name": "qty", "type": "INT64", "mode": "REQUIRED"},
+    {"name": "price", "type": "NUMERIC", "mode": "REQUIRED"}
+  ]},
+  {"name": "currency", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "authorized", "type": "BOOL", "mode": "REQUIRED"},
+  {"name": "lifecycle", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "fetched_at", "type": "TIMESTAMP", "mode": "REQUIRED", "description": "Partition column: always filter on it"},
+  {"name": "mode", "type": "STRING", "mode": "REQUIRED", "description": "LIVE | CACHE | DEMO_SNAPSHOT"},
+  {"name": "source_url", "type": "STRING", "mode": "NULLABLE"}
+]

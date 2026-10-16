@@ -1,0 +1,15 @@
+[
+  {"name": "mpn_norm", "type": "STRING", "mode": "REQUIRED", "description": "normalize_mpn(mpn): join key"},
+  {"name": "mpn", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "manufacturer", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "category", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "description", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "package", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "params", "type": "JSON", "mode": "NULLABLE", "description": "Category-specific parametrics used by the alternates comparator"},
+  {"name": "lifecycle", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "ltb_date", "type": "DATE", "mode": "NULLABLE"},
+  {"name": "rohs", "type": "BOOL", "mode": "NULLABLE"},
+  {"name": "datasheet_url", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "source", "type": "STRING", "mode": "REQUIRED"},
+  {"name": "snapshot_date", "type": "DATE", "mode": "REQUIRED"}
+]

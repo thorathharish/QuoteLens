@@ -1,0 +1,181 @@
+{
+  "file": "motor_controller.xlsx",
+  "sheet": "BOM",
+  "header_row": 1,
+  "data_rows": 60,
+  "lines_after_consolidation": 59,
+  "build_quantities": [
+    100,
+    1000,
+    5000
+  ],
+  "target_ship_offset_days": 56,
+  "open_blockers": 3,
+  "seeded_rows": [
+    {
+      "row": 1,
+      "refdes": "U1",
+      "mpn": "STM32G431CBT6",
+      "match": "MATCHED",
+      "issues": [],
+      "risks": [
+        "S02"
+      ],
+      "note": "Only one authorized distributor stocks it"
+    },
+    {
+      "row": 2,
+      "refdes": "U2",
+      "mpn": "DRV8323RSRGZR",
+      "match": "MATCHED",
+      "issues": [],
+      "risks": [
+        "S01",
+        "S03"
+      ],
+      "note": "Low stock everywhere; 16-week lead time"
+    },
+    {
+      "row": 3,
+      "refdes": "U3,U4",
+      "mpn": "INA240A1PWR",
+      "match": "MATCHED",
+      "issues": [],
+      "risks": [
+        "P01"
+      ],
+      "note": "One distributor ~2.3x the others"
+    },
+    {
+      "row": 4,
+      "refdes": "U5",
+      "mpn": "LM5164DDAR",
+      "match": "MATCHED",
+      "issues": [],
+      "risks": [
+        "P02"
+      ],
+      "note": "Customer target price far below market"
+    },
+    {
+      "row": 6,
+      "refdes": "U7",
+      "mpn": "MCP2551-I/SN",
+      "match": "MATCHED",
+      "issues": [],
+      "risks": [
+        "L02"
+      ],
+      "note": "NRND; successor MCP2561-E/SN"
+    },
+    {
+      "row": 10,
+      "refdes": "U11-U13",
+      "mpn": "A1101ELHLT-T",
+      "match": "MATCHED",
+      "issues": [],
+      "risks": [
+        "L01",
+        "S01"
+      ],
+      "note": "Obsolete, no authorized stock (blocker); drop-in A1120ELHLX-T"
+    },
+    {
+      "row": 13,
+      "refdes": "U16",
+      "mpn": "TPS5431DDR",
+      "match": "NOT_FOUND",
+      "issues": [],
+      "risks": [
+        "D03"
+      ],
+      "note": "Typo of TPS54331DDR"
+    },
+    {
+      "row": 30,
+      "refdes": "R16-R21",
+      "mpn": "RC0603FR-07100RL",
+      "match": "MATCHED",
+      "issues": [
+        "REFDES_QTY_MISMATCH"
+      ],
+      "risks": [
+        "D05"
+      ],
+      "note": "6 designators but quantity 5"
+    },
+    {
+      "row": 35,
+      "refdes": "R36,R37",
+      "mpn": "RC0805FR-07100KL",
+      "match": "MATCHED",
+      "issues": [
+        "MISSING_MFR"
+      ],
+      "risks": [
+        "D02"
+      ],
+      "note": "Manufacturer column empty"
+    },
+    {
+      "row": 38,
+      "refdes": "R44",
+      "mpn": "RC0603FR-071KL",
+      "match": "MATCHED",
+      "issues": [
+        "DNP"
+      ],
+      "risks": [],
+      "note": "Do not populate: excluded from costing, not merged"
+    },
+    {
+      "row": 41,
+      "refdes": "C21-C24",
+      "mpn": "GRM188R71H104KA93D",
+      "match": "MATCHED",
+      "issues": [],
+      "risks": [],
+      "note": "Duplicate MPN: consolidated into the C1-C20 line (qty 24)"
+    },
+    {
+      "row": 51,
+      "refdes": "L1",
+      "mpn": "SRP1265A-220M",
+      "match": "MATCHED",
+      "issues": [],
+      "risks": [
+        "P03"
+      ],
+      "note": "Reel-only (MOQ 500): large excess at low volume"
+    },
+    {
+      "row": 57,
+      "refdes": "J2",
+      "mpn": "0430450200",
+      "match": "MATCHED",
+      "issues": [
+        "QTY_INVALID"
+      ],
+      "risks": [
+        "D04"
+      ],
+      "note": "Quantity 'TBD' (blocker)"
+    },
+    {
+      "row": 59,
+      "refdes": "F1",
+      "mpn": null,
+      "match": null,
+      "issues": [
+        "MISSING_MPN"
+      ],
+      "risks": [
+        "D01"
+      ],
+      "note": "No MPN (blocker); demo fixes it to 0451005.MRL"
+    }
+  ],
+  "unseeded_rows_expectation": "MATCHED with no data issues and no seeded risks",
+  "totals": null,
+  "_totals_note": "Per-volume totals are frozen in Phase 4, once the impact engine exists."
+}

@@ -13,6 +13,8 @@ dependencies = [
     "google-auth>=2.35",
     "google-cloud-firestore>=2.19",
     "google-cloud-pubsub>=2.26",
+    "openpyxl>=3.1",
+    "google-cloud-bigquery>=3.27",
 ]
 
 [dependency-groups]
@@ -22,6 +24,7 @@ dev = [
     "pytest-cov>=6.0",
     "ruff>=0.8",
     "mypy>=1.13",
+    "types-openpyxl>=3.1.5.20260827",
 ]
 
 [build-system]
@@ -60,7 +63,8 @@ allowed-confusables = ["×"]  # used deliberately in human-readable formulas
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
-packages = ["app"]
+files = ["app", "scripts"]
+mypy_path = "scripts"
 
 [[tool.mypy.overrides]]
 module = ["google.cloud.*", "google.auth.*", "google.oauth2.*"]
