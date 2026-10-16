@@ -1,0 +1,35 @@
+# Build and push both images (run by infra/deploy.sh; not triggered on every push to save
+# the 2,500 free build-minutes). Free tier: default e2-standard-2 machine.
+#
+#   gcloud builds submit --config infra/cloudbuild.yaml --substitutions _TAG=<tag>,_REGION=us-central1 .
+substitutions:
+  _REGION: us-central1
+  _REPO: quotelens
+  _TAG: latest
+
+steps:
+  - id: api
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - services/api/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:${_TAG}
+      - .
+  - id: web
+    name: gcr.io/cloud-builders/docker
+    waitFor: ["-"]
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/web:${_TAG}
+      - apps/web
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/api:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/web:${_TAG}
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s

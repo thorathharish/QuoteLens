@@ -102,14 +102,14 @@ done
 gcloud pubsub topics add-iam-policy-binding "$TOPIC" \
   --member="serviceAccount:$(sa_email "$SA_API")" --role=roles/pubsub.publisher >/dev/null
 
-log "Artifact Registry ($AR_REPO) with cleanup policy (keep 3 most recent)"
+log "Artifact Registry ($AR_REPO) with cleanup policy (keep 2 most recent: free tier is 0.5 GB)"
 if ! gcloud artifacts repositories describe "$AR_REPO" --location="$REGION" >/dev/null 2>&1; then
   gcloud artifacts repositories create "$AR_REPO" --repository-format=docker \
     --location="$REGION" --description="QuoteLens images"
 fi
 cat >"$tmp_dir/cleanup.json" <<'JSON'
 [
-  {"name": "keep-3-recent", "action": {"type": "Keep"}, "mostRecentVersions": {"keepCount": 3}},
+  {"name": "keep-2-recent", "action": {"type": "Keep"}, "mostRecentVersions": {"keepCount": 2}},
   {"name": "delete-older", "action": {"type": "Delete"}, "condition": {"tagState": "ANY", "olderThan": "1d"}}
 ]
 JSON
