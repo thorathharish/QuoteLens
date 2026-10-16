@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.config import BlobBackend, JobBackend, Settings, StorageBackend
+from app.config import BlobBackend, CatalogBackend, JobBackend, Settings, StorageBackend
 from app.domain.enums import JobType
 from app.infra.blobstore import BlobStore, GcsBlobStore, InMemoryBlobStore
 from app.infra.jobbus import InlineJobBus, PubSubJobBus
@@ -14,6 +14,10 @@ from app.ingestion.column_mapper import GeminiHeaderMapper, HeaderMapper
 from app.ingestion.service import IngestionService
 from app.jobs.analysis import AnalysisPipeline
 from app.jobs.dispatcher import JobDispatcher
+from app.sourcing.chain import OfferSourceChain
+from app.sourcing.providers.catalog import BigQueryCatalogProvider, SeedCatalogProvider
+from app.sourcing.review import SourcingReview
+from app.sourcing.service import SourcingService
 
 
 class JobBus(Protocol):
@@ -30,6 +34,8 @@ class Container:
     dispatcher: JobDispatcher
     job_bus: JobBus
     ingestion: IngestionService
+    sourcing: SourcingService
+    review: SourcingReview
 
 
 def build_store(settings: Settings) -> DocumentStore:
@@ -48,6 +54,19 @@ def build_blobs(settings: Settings) -> BlobStore:
     return InMemoryBlobStore()
 
 
+def build_offer_chain(settings: Settings) -> OfferSourceChain:
+    if settings.catalog_backend is CatalogBackend.BIGQUERY:
+        if not settings.gcp_project:
+            raise ValueError("GCP_PROJECT is required when CATALOG_BACKEND=bigquery")
+        bq = BigQueryCatalogProvider(
+            settings.gcp_project, settings.bq_catalog_dataset, settings.gcp_region
+        )
+        return OfferSourceChain(catalog=bq, search=bq)
+    seed = SeedCatalogProvider(settings.catalog_seed_dir)
+    # Live distributor adapters (P1, issue-tracked) plug into `live=` here.
+    return OfferSourceChain(catalog=seed, search=seed)
+
+
 def build_header_mapper(settings: Settings) -> HeaderMapper | None:
     model = build_chat_model(settings, ModelTier.FLASH, max_output_tokens=512)
     return GeminiHeaderMapper(model) if model is not None else None
@@ -58,6 +77,7 @@ def build_container(
     store: DocumentStore | None = None,
     blobs: BlobStore | None = None,
     header_mapper: HeaderMapper | None = None,
+    offer_chain: OfferSourceChain | None = None,
 ) -> Container:
     repos = Repositories(store or build_store(settings))
     blob_store = blobs or build_blobs(settings)
@@ -78,7 +98,10 @@ def build_container(
         settings=settings,
         header_mapper=header_mapper or build_header_mapper(settings),
     )
-    dispatcher.register(JobType.ANALYSIS, AnalysisPipeline(repos=repos, ingestion=ingestion))
+    sourcing = SourcingService(repos=repos, chain=offer_chain or build_offer_chain(settings))
+    dispatcher.register(
+        JobType.ANALYSIS, AnalysisPipeline(repos=repos, ingestion=ingestion, sourcing=sourcing)
+    )
     return Container(
         settings=settings,
         repos=repos,
@@ -86,4 +109,6 @@ def build_container(
         dispatcher=dispatcher,
         job_bus=job_bus,
         ingestion=ingestion,
+        sourcing=sourcing,
+        review=SourcingReview(repos=repos, sourcing=sourcing),
     )

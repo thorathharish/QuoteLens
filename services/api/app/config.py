@@ -2,6 +2,7 @@
 
 from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -9,7 +10,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.domain.enums import DataMode
 
-__all__ = ["BlobBackend", "DataMode", "JobBackend", "Settings", "StorageBackend", "get_settings"]
+__all__ = [
+    "BlobBackend",
+    "CatalogBackend",
+    "DataMode",
+    "JobBackend",
+    "Settings",
+    "StorageBackend",
+    "get_settings",
+]
 
 
 class JobBackend(StrEnum):
@@ -27,6 +36,11 @@ class JobBackend(StrEnum):
 class StorageBackend(StrEnum):
     MEMORY = "memory"
     FIRESTORE = "firestore"
+
+
+class CatalogBackend(StrEnum):
+    SEED = "seed"  # data/catalog_seed/*.jsonl in memory (local, tests, demo fallback)
+    BIGQUERY = "bigquery"
 
 
 class BlobBackend(StrEnum):
@@ -49,6 +63,8 @@ class Settings(BaseSettings):
     # Backends
     storage_backend: StorageBackend = StorageBackend.MEMORY
     blob_backend: BlobBackend = BlobBackend.MEMORY
+    catalog_backend: CatalogBackend = CatalogBackend.SEED
+    catalog_seed_dir: Path = Path(__file__).resolve().parents[3] / "data" / "catalog_seed"
     job_backend: JobBackend = JobBackend.INLINE
     data_mode: DataMode = DataMode.CACHE_FIRST
 

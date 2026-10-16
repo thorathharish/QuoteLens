@@ -128,6 +128,18 @@ class MatchResult(DomainModel):
     candidates: list[str] = []
 
 
+class OfferRecommendation(DomainModel):
+    """The system's suggested offer for a line (provenance RECOMMENDED; the user may override).
+
+    `offer_id` is None when no authorized, purchasable offer exists; `reasons` then say why.
+    """
+
+    offer_id: str | None
+    score: float | None = None
+    volume: int = Field(ge=1, description="Build quantity the recommendation was scored at")
+    reasons: list[str] = []
+
+
 class Override(DomainModel):
     old: JsonValue
     new: JsonValue
@@ -154,6 +166,7 @@ class BomLine(DomainModel):
     validation: list[Issue] = []
     match: MatchResult = Field(default_factory=MatchResult)
     selected_offer_id: str | None = None
+    recommendation: OfferRecommendation | None = None
     substituted_from: str | None = None
     overrides: dict[str, Override] = {}
     source_rows: list[int] = []  # 1-based spreadsheet rows this line came from
@@ -227,6 +240,7 @@ class Component(DomainModel):
     lifecycle: Lifecycle = Lifecycle.UNKNOWN
     ltb_date: date | None = None
     datasheet_url: str | None = None
+    evidence_id: str | None = None
 
 
 # ── Risk ─────────────────────────────────────────────────────

@@ -6,8 +6,20 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.catalog.rows import CatalogComponent, CatalogOffer
 from app.domain.enums import BomField, DataMode, MappingMethod
-from app.domain.models import BomLine, BomUpload, Project
+from app.domain.facts import Evidence
+from app.domain.models import (
+    Alternative,
+    BomLine,
+    BomUpload,
+    Component,
+    LineImpact,
+    Offer,
+    OfferRecommendation,
+    Project,
+    Risk,
+)
 
 
 class ApiModel(BaseModel):
@@ -89,3 +101,43 @@ class LinePage(ApiModel):
     items: list[BomLine]
     issue_counts: dict[str, int]
     next_cursor: str | None = None
+
+
+class AnalysisRequest(ApiModel):
+    line_ids: list[str] | None = Field(default=None, description="Only these lines; all if omitted")
+
+
+class LineDetail(ApiModel):
+    line: BomLine
+    component: Component | None
+    offers: list[Offer]
+    selected_offer: Offer | None
+    recommendation: OfferRecommendation | None
+    evidence: dict[str, Evidence]
+    risks: list[Risk] = Field(default=[], description="Populated from Phase 4")
+    impact_by_volume: list[LineImpact] = Field(default=[], description="Populated from Phase 4")
+    alternatives: list[Alternative] = Field(default=[], description="Populated from Phase 5")
+
+
+class OffersResponse(ApiModel):
+    offers: list[Offer]
+    recommendation: OfferRecommendation | None
+
+
+class MpnUpdate(ApiModel):
+    mpn: str = Field(min_length=1, max_length=64)
+    manufacturer: str | None = Field(default=None, max_length=120)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class OfferSelection(ApiModel):
+    offer_id: str
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class ComponentLookup(ApiModel):
+    mpn: str
+    component: CatalogComponent | None
+    offers: list[CatalogOffer]
+    suggestions: list[str]
+    warnings: list[str]

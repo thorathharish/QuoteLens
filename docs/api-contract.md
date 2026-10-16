@@ -29,12 +29,12 @@
 | 8 | `POST /projects/{pid}/analysis` | Re-run (all or `line_ids`) | `{line_ids?, refresh_live?: bool}` → `202 {job_id}` |
 | **Lines and sourcing** |||
 | 9 | `GET /projects/{pid}/lines` | Table | `?issue=&risk_severity=&match_status=&q=&sort=` → `Page<LineRow>` |
-| 10 | `GET /projects/{pid}/lines/{lid}` | Line detail | → `{line, offers[], selected_offer, risks[], impact_by_volume[], alternatives[], evidence_index}` |
+| 10 | `GET /projects/{pid}/lines/{lid}` | Line detail | → `{line, component, offers[], selected_offer, recommendation{offer_id, score, volume, reasons[]}, evidence{id→Evidence}, risks[], impact_by_volume[], alternatives[]}` (the last three are filled in Phases 4–5) |
 | 11 | `PATCH /projects/{pid}/lines/{lid}` | Correct data (audited) | `{changes{mpn?, manufacturer?, qty_per?, uom?, dnp?}, reason}` → `{line, triggered_job_id}` |
-| 12 | `POST /projects/{pid}/lines/{lid}/match` | Resolve ambiguous match | `{component_id \| mpn}` → `LineDetail` |
-| 13 | `GET /projects/{pid}/lines/{lid}/offers` | Compare offers | → `{offers[Offer], recommended{offer_id, score, reasons[]}}` |
+| 12 | `POST /projects/{pid}/lines/{lid}/match` | Correct the MPN or accept a suggested candidate (audited; the line is re-sourced at once) | `{mpn, manufacturer?, reason}` → `LineDetail` |
+| 13 | `GET /projects/{pid}/lines/{lid}/offers` | Compare offers | → `{offers[Offer], recommendation{offer_id, score, volume, reasons[]}}` |
 | 14 | `PUT /projects/{pid}/lines/{lid}/selected-offer` | Override selection | `{offer_id, reason}` → `LineDetail` |
-| 15 | `GET /components/lookup` | Ad-hoc part lookup | `?mpn=&manufacturer=&mode=` → `{component, offers[], evidence[]}` |
+| 15 | `GET /components/lookup` | Ad-hoc part lookup | `?mpn=&mode=` → `{mpn, component, offers[], suggestions[], warnings[]}` |
 | **Risks** |||
 | 16 | `GET /projects/{pid}/risks` | List | `?status=&severity=&category=&line_id=` → `{summary, items: Page<Risk>}` |
 | 17 | `GET /projects/{pid}/risks/{rid}` | Detail plus evidence | → `Risk & {evidence[]}` |

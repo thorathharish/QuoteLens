@@ -7,6 +7,7 @@ from app.domain.models import (
     BomLine,
     BomUpload,
     ChatMessage,
+    Component,
     Job,
     Offer,
     Project,
@@ -37,6 +38,10 @@ class Repositories:
 
     def uploads(self, project_id: str) -> TypedCollection[BomUpload]:
         return TypedCollection(self.store, ("projects", project_id, "uploads"), BomUpload)
+
+    def components(self, project_id: str) -> TypedCollection[Component]:
+        """Catalog snapshot of the matched parts, keyed by normalized MPN."""
+        return TypedCollection(self.store, ("projects", project_id, "components"), Component)
 
     def offers(self, project_id: str) -> TypedCollection[Offer]:
         return TypedCollection(self.store, ("projects", project_id, "offers"), Offer)
