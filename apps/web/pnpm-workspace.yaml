@@ -1,3 +1,5 @@
 allowBuilds:
-  # Postinstall only picks a prebuilt binary; the optional platform package already provides it.
+  # Both postinstalls only select/verify a prebuilt binary that the optional
+  # platform package already provides, so they are not needed.
+  esbuild: false
   unrs-resolver: false
