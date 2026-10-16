@@ -177,9 +177,11 @@ def l01_end_of_life(ctx: RiskContext) -> Risk | None:
     if component is None or component.lifecycle not in (Lifecycle.EOL, Lifecycle.OBSOLETE):
         return None
     need = ctx.need
-    authorized_stock = sum(o.stock or 0 for o in ctx.authorized)
+    known = [o for o in ctx.authorized if o.stock is not None]
+    authorized_stock = sum(o.stock or 0 for o in known)
     broker_stock = sum(o.stock or 0 for o in ctx.offers if not o.authorized)
-    short = need is None or authorized_stock < need
+    # Blocker only when stock is known to be short; unknown inventory is reported as HIGH.
+    short = need is None or (len(known) == len(ctx.authorized) and authorized_stock < need)
     why = f"{ctx.line.mpn} is {component.lifecycle.value.lower()} per the catalog"
     if component.ltb_date:
         why += f" (last-time-buy date {component.ltb_date.isoformat()})"
@@ -256,6 +258,8 @@ def s01_insufficient_stock(ctx: RiskContext) -> Risk | None:
     need = ctx.need
     if ctx.line.match.status is not MatchStatus.MATCHED or need is None or not ctx.offers:
         return None
+    if any(o.stock is None for o in ctx.authorized):
+        return None  # a distributor does not report inventory: shortage cannot be claimed
     stock = sum(o.stock or 0 for o in ctx.authorized)
     if stock >= need:
         return None

@@ -173,7 +173,7 @@ API (`api/v1/routers/projects.py`, `bom.py`, `jobs.py`, `lines.py`): endpoints #
 In `app/sourcing/`:
 - `providers/base.py`: `OfferProvider` Protocol, `ProviderResult` (offers, evidence, errors).
 - `providers/catalog.py` (P0): one batched BigQuery query using `IN UNNEST(@mpns)`; an in-memory variant for tests.
-- **Deferred (P1, issue-tracked; needs keys from #9):** `providers/digikey.py`, `mouser.py`, `nexar.py` (only when keys are in Secret Manager): httpx async; DigiKey OAuth2 token cache; Mouser exact-MPN check; responses mapped to `Offer`. Tests use recorded fixtures (respx).
+- **Live adapters (done):** `providers/live.py` covers DigiKey (Product Information v4), Mouser (Search v1) and element14 (Product Search). Each uses exact-MPN matching, keeps prices in their native currency (FX from assumptions), leaves undocumented or missing fields **unknown** (DigiKey inventory without `QuantityAvailable`, element14 lead time), and writes results through to the cache with a BigQuery load job. Nexar is not implemented (no key).: httpx async; DigiKey OAuth2 token cache; Mouser exact-MPN check; responses mapped to `Offer`. Tests use recorded fixtures (respx).
 - `infra/http.py`: retry (2 attempts on 429/5xx), a 4s timeout and a per-provider circuit breaker.
 - `chain.py`: the three `DATA_MODE` orders, with live providers as a pluggable list (empty until the adapters land). Write-through to `offers_cache` comes with the live adapters.
 - `matcher.py`: MATCHED, AMBIGUOUS or NOT_FOUND, with a confidence score.

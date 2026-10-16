@@ -171,3 +171,19 @@ def test_decisions_survive_reevaluation_and_drive_readiness() -> None:
     assert open_summary.readiness_pct.value == Decimal("0.500")
     assert open_summary.spend_at_risk_pct.value == Decimal("0.250")
     assert summarize([carried], 2, {}, Decimal(200)).ready
+
+
+def test_unknown_inventory_never_produces_a_false_shortage() -> None:
+    from app.risk.rules import l01_end_of_life, s01_insufficient_stock
+
+    unknown = [_offer(stock=None)]
+    assert s01_insufficient_stock(_ctx(offers=unknown)) is None
+    component = Component(
+        id="P1", mpn="P1", manufacturer="M", lifecycle=Lifecycle.OBSOLETE, evidence_id="ev_cmp"
+    )
+    risk = l01_end_of_life(_ctx(offers=unknown, component=component))
+    assert risk is not None
+    assert risk.severity is Severity.HIGH  # shortage not proven → not a blocker
+    known_empty = l01_end_of_life(_ctx(offers=[_offer(stock=0)], component=component))
+    assert known_empty is not None
+    assert known_empty.severity is Severity.BLOCKER
