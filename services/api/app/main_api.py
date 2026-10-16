@@ -7,10 +7,13 @@ from app.api.v1.routers import (
     alternatives,
     bom,
     copilot,
+    demo,
     insights,
     jobs,
     lines,
     projects,
+    quotes,
+    review,
     risks,
     sourcing,
 )
@@ -39,6 +42,9 @@ def _configure(app: FastAPI, settings: Settings) -> None:
         risks.router,
         alternatives.router,
         copilot.router,
+        quotes.router,
+        review.router,
+        demo.router,
     )
     for router in routers:
         app.include_router(router, prefix=API_PREFIX)

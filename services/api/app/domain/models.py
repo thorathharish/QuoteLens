@@ -347,18 +347,39 @@ def quote_version_id(version: int) -> str:
     return f"v{version:04d}"
 
 
+class QuoteLine(DomainModel):
+    """Frozen copy of one priced line at quote time (primary volume)."""
+
+    line_no: int
+    cpn: str | None = None
+    mpn: str | None = None
+    manufacturer: str | None = None
+    description: str | None = None
+    qty_per: Fact[Decimal]
+    refdes: list[str] = []
+    dnp: bool = False
+    substituted_from: str | None = None
+    distributor: str | None = None
+    unit_price: Fact[Decimal]
+    extended: Fact[Decimal]
+
+
 class QuoteVersion(DomainModel):
     id: str
     version: int = Field(ge=1)
     status: QuoteStatus = QuoteStatus.DRAFT
     created_at: datetime = Field(default_factory=utcnow)
+    created_by: DemoRole = DemoRole.VIEWER
     finalized_at: datetime | None = None
+    finalized_by: DemoRole | None = None
     note: str | None = None
     currency: str
+    data_mode: DataMode = DataMode.CACHE_FIRST
     volumes: list[VolumeQuote]
     assumptions: Assumptions
     readiness: Readiness
-    line_snapshot_ref: str | None = None
+    unpriced_lines: int = 0
+    lines: list[QuoteLine] = []
 
 
 # ── Jobs, audit, chat ────────────────────────────────────────

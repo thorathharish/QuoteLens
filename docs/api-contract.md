@@ -30,7 +30,7 @@
 | **Lines and sourcing** |||
 | 9 | `GET /projects/{pid}/lines` | Table | `?issue=&risk_severity=&match_status=&q=&sort=` → `Page<LineRow>` |
 | 10 | `GET /projects/{pid}/lines/{lid}` | Line detail | → `{line, component, offers[], selected_offer, recommendation{offer_id, score, volume, reasons[]}, evidence{id→Evidence}, risks[], impact_by_volume[], alternatives[]}` (the last three are filled in Phases 4–5) |
-| 11 | `PATCH /projects/{pid}/lines/{lid}` | Correct data (audited) | `{changes{mpn?, manufacturer?, qty_per?, uom?, dnp?}, reason}` → `{line, triggered_job_id}` |
+| 11 | `PATCH /projects/{pid}/lines/{lid}` | Correct data (audited; re-sources if MPN/qty/UOM/DNP change) | `{changes{mpn?, manufacturer?, description?, qty_per?, uom?, dnp?}, reason}` → `LineDetail`. A user-entered quantity becomes an ACTUAL fact citing a `USER_OVERRIDE` evidence record. `422` if nothing changes; `409` on a finalized project. |
 | 12 | `POST /projects/{pid}/lines/{lid}/match` | Correct the MPN or accept a suggested candidate (audited; the line is re-sourced at once) | `{mpn, manufacturer?, reason}` → `LineDetail` |
 | 13 | `GET /projects/{pid}/lines/{lid}/offers` | Compare offers | → `{offers[Offer], recommendation{offer_id, score, volume, reasons[]}}` |
 | 14 | `PUT /projects/{pid}/lines/{lid}/selected-offer` | Override selection | `{offer_id, reason}` → `LineDetail` |
@@ -51,14 +51,14 @@
 | 25 | `POST /projects/{pid}/chat/sessions/{sid}/messages` | Ask (SSE; rate-limited to 10/min per client) | `{content}` → `text/event-stream`: `tool_start{name,args}` · `tool_end{name}` · `token{text}` (streamed only **after** the grounding check) · `citations{items[{evidence_id,label}]}` · `done{message_id, grounded, unverified_numbers[]}` · `error{code,message}`. `503 LLM_UNAVAILABLE` without Gemini. |
 | 26 | `GET /projects/{pid}/chat/sessions/{sid}/messages` | History | → `{items: ChatMessage[{role, content, citations, tool_calls, grounded}]}` |
 | **Quotes** |||
-| 27 | `POST /projects/{pid}/quotes` | Snapshot version | `{note?}` → `201 QuoteVersion` (includes readiness) |
-| 28 | `GET /projects/{pid}/quotes` · `/{version}` | List / get | → `Page<QuoteSummary>` / `QuoteVersion` |
-| 29 | `POST /projects/{pid}/quotes/{version}/finalize` | Gate 4 | `{note}` → `QuoteVersion`. `409 QUOTE_HAS_OPEN_BLOCKERS` with the list. |
-| 30 | `GET /projects/{pid}/quotes/{version}/export` | Download | `?format=xlsx` → `{download_url (signed, 15 min)}` |
+| 27 | `POST /projects/{pid}/quotes` | Snapshot version (draft allowed with blockers) | `{note?}` → `201 QuoteVersion{version, status, volumes[{volume, material, adders, total, per_unit}], assumptions, readiness{ready, open_blockers[], waived[]}, unpriced_lines, lines[QuoteLine], data_mode, created_by}` |
+| 28 | `GET /projects/{pid}/quotes` · `/{version}` | List (newest first) / get | → `{items: QuoteVersion[]}` / `QuoteVersion` |
+| 29 | `POST /projects/{pid}/quotes/{version}/finalize` | Gate 4 (latest version only; readiness re-checked now) | `{note}` → `QuoteVersion`. `409 QUOTE_HAS_OPEN_BLOCKERS` (with ids) or `409 CONFLICT`. Sets the project to `FINALIZED` (read-only). `POST /projects/{pid}/reopen {reason}` starts a new revision. |
+| 30 | `GET /projects/{pid}/quotes/{version}/export` | Download | `?format=xlsx` → the workbook itself (`Content-Disposition: attachment`; sheets Summary, Lines, Risks, Assumptions, with provenance columns). A copy goes to `exports/` (7-day lifecycle). |
 | **Evidence, audit, demo, health** |||
 | 31 | `GET /projects/{pid}/evidence/{eid}` | Source detail | → `Evidence` |
-| 32 | `GET /projects/{pid}/audit` | Decision trail | → `Page<AuditEvent>` |
-| 33 | `POST /demo/projects` | Seed scenario | `{scenario: motor_controller\|iot_sensor\|messy_format}` → `201 {project_id, job_id}` |
+| 32 | `GET /projects/{pid}/audit` | Decision trail (newest first) | `?limit=` → `{items: AuditEvent[]}` |
+| 33 | `POST /demo/projects` | Seed scenario (DEMO_SNAPSHOT mode, target ship date +56 days, volumes 100/1k/5k) | `{scenario: motor_controller\|iot_sensor\|messy_format}` → `201 {project_id, job_id}` |
 | 34 | `GET /healthz` · `GET /readyz` | Probes | → `{status, deps{firestore, bigquery, vertex, providers{...}}}` |
 | **Worker (internal)** |||
 | 35 | `POST /internal/jobs/pubsub` | Pub/Sub push (OIDC verified) | Pub/Sub envelope → `204` |

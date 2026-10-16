@@ -8,6 +8,7 @@ from langchain_core.language_models import BaseChatModel
 from app.alternatives.service import AlternativesJob, AlternativesService
 from app.config import BlobBackend, CatalogBackend, JobBackend, Settings, StorageBackend
 from app.copilot.service import CopilotService
+from app.demo.service import DemoService
 from app.domain.enums import JobType
 from app.infra.blobstore import BlobStore, GcsBlobStore, InMemoryBlobStore
 from app.infra.jobbus import InlineJobBus, PubSubJobBus
@@ -18,6 +19,7 @@ from app.ingestion.column_mapper import GeminiHeaderMapper, HeaderMapper
 from app.ingestion.service import IngestionService
 from app.jobs.analysis import AnalysisPipeline
 from app.jobs.dispatcher import JobDispatcher
+from app.quotation.service import QuotationService
 from app.risk.service import InsightService
 from app.sourcing.chain import OfferSourceChain
 from app.sourcing.providers.catalog import BigQueryCatalogProvider, SeedCatalogProvider
@@ -44,6 +46,8 @@ class Container:
     insights: InsightService
     alternatives: AlternativesService
     copilot: CopilotService
+    quotes: QuotationService
+    demo: DemoService
 
 
 def build_store(settings: Settings) -> DocumentStore:
@@ -142,4 +146,6 @@ def build_container(
         insights=insights,
         alternatives=alternatives,
         copilot=copilot,
+        quotes=QuotationService(repos=repos, insights=insights),
+        demo=DemoService(repos=repos, ingestion=ingestion, samples_dir=settings.samples_dir),
     )
