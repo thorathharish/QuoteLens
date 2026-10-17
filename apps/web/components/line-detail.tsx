@@ -1,5 +1,6 @@
 "use client";
 
+import { AskButton } from "./copilot";
 import { useMutation } from "@tanstack/react-query";
 import clsx from "clsx";
 import Link from "next/link";
@@ -15,12 +16,12 @@ type Offer = Schemas["Offer"];
 export function LineDialog({ projectId, lineId, onClose }: { projectId: string; lineId: string | null; onClose: () => void }) {
   return (
     <Dialog open={lineId !== null} onClose={onClose} title="BOM line" wide>
-      {lineId && <LineDetailBody projectId={projectId} lineId={lineId} />}
+      {lineId && <LineDetailBody projectId={projectId} lineId={lineId} onAsk={onClose} />}
     </Dialog>
   );
 }
 
-function LineDetailBody({ projectId, lineId }: { projectId: string; lineId: string }) {
+function LineDetailBody({ projectId, lineId, onAsk }: { projectId: string; lineId: string; onAsk: () => void }) {
   const detail = useLine(projectId, lineId);
   const evidence = useEvidence();
   if (detail.isPending) return <PageSkeleton />;
@@ -32,7 +33,21 @@ function LineDetailBody({ projectId, lineId }: { projectId: string; lineId: stri
     <div className="flex flex-col gap-6">
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="code text-lg font-semibold">{line.mpn ?? "No part number"}</p>
+          <p className="flex flex-wrap items-center gap-3">
+            <span className="code text-lg font-semibold">{line.mpn ?? "No part number"}</span>
+            {/* Asking closes this dialog so the docked copilot is in view. */}
+            <AskButton
+              onAsk={onAsk}
+              context={{
+                key: line.id,
+                label: line.mpn ?? `line ${line.line_no}`,
+                detail: line.refdes?.length ? line.refdes.slice(0, 4).join(", ") : "BOM line",
+                suggestions: line.mpn
+                  ? [`Compare the distributor offers for ${line.mpn}.`, `Why was this distributor recommended for ${line.mpn}?`]
+                  : ["What is missing on this line and how do I fix it?"],
+              }}
+            />
+          </p>
           <p className="text-ink-2">
             {line.manufacturer ?? "Manufacturer not given"}
             {line.description && <span className="text-ink-3">, {line.description}</span>}

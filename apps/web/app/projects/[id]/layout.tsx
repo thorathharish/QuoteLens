@@ -1,11 +1,11 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-import { CopilotDrawer } from "@/components/copilot";
+import { Suspense, useEffect } from "react";
+import { CopilotPane, CopilotProvider } from "@/components/copilot";
 import { EvidenceProvider, ProvenanceLegend } from "@/components/fact";
 import { RoleSwitcher } from "@/components/role";
-import { Button, ErrorNote, PageSkeleton, Spinner } from "@/components/ui";
+import { ErrorNote, PageSkeleton, Spinner } from "@/components/ui";
 import { ThemeSelect } from "@/components/theme";
 import { MobileNav, SideNav } from "@/components/side-nav";
 import { Brand, DataModeTag, StatusTag } from "@/components/workspace";
@@ -14,10 +14,10 @@ import { useInvalidateProject, useJob, useProject } from "@/lib/api/hooks";
 export default function ProjectLayout({ children }: { children: React.ReactNode }) {
   const { id } = useParams<{ id: string }>();
   const project = useProject(id);
-  const [copilotOpen, setCopilotOpen] = useState(false);
 
   return (
     <EvidenceProvider projectId={id}>
+    <CopilotProvider>
       <div className="flex min-h-dvh flex-col">
         <header className="sticky top-0 z-30 border-b border-rule bg-[var(--header-bg)] backdrop-blur-xl">
           <div className="flex flex-wrap items-stretch justify-between gap-x-6 px-4 sm:px-6 lg:pl-5">
@@ -37,9 +37,6 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
               <ThemeSelect compact />
               <RoleSwitcher />
-              <Button variant="primary" onClick={() => setCopilotOpen(true)} aria-expanded={copilotOpen}>
-                Ask copilot
-              </Button>
             </div>
           </div>
         </header>
@@ -55,6 +52,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             <ErrorNote error={project.error} />
             {project.data && children}
           </main>
+          {project.data && <CopilotPane projectId={id} />}
         </div>
 
         <footer className="border-t border-rule bg-[var(--header-bg)]">
@@ -63,7 +61,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
           </div>
         </footer>
       </div>
-      <CopilotDrawer projectId={id} open={copilotOpen} onClose={() => setCopilotOpen(false)} />
+    </CopilotProvider>
     </EvidenceProvider>
   );
 }
