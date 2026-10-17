@@ -1,9 +1,10 @@
 "use client";
 
+import clsx from "clsx";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FactValue } from "@/components/fact";
-import { Empty, ErrorNote, Panel, SeverityTag, Spinner } from "@/components/ui";
+import { Empty, ErrorNote, PageSkeleton, Panel, SeverityTag } from "@/components/ui";
 import { useOverview, useProject } from "@/lib/api/hooks";
 import { percent, quantity } from "@/lib/format";
 
@@ -17,7 +18,7 @@ export default function OverviewPage() {
   if (project.data && project.data.status === "DRAFT") {
     return (
       <Empty title="No BOM yet">
-        <Link href={`/projects/${id}/upload`} className="font-bold text-mask hover:underline">
+        <Link href={`/projects/${id}/upload`} className="font-semibold text-mask hover:underline">
           Upload the customer BOM
         </Link>{" "}
         to start pricing it.
@@ -28,30 +29,36 @@ export default function OverviewPage() {
     return (
       <Empty title="Confirm the column mapping">
         The file is uploaded.{" "}
-        <Link href={`/projects/${id}/upload`} className="font-bold text-mask hover:underline">
+        <Link href={`/projects/${id}/upload`} className="font-semibold text-mask hover:underline">
           Review how its columns were mapped
         </Link>{" "}
         to run the analysis.
       </Empty>
     );
   }
-  if (overview.isPending) return <Spinner />;
+  if (overview.isPending) return <PageSkeleton label="Loading overview" />;
   if (overview.error) return <ErrorNote error={overview.error} />;
   const o = overview.data;
   const r = o.risks;
   const blockers = r.unresolved_by_severity?.BLOCKER ?? 0;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="flex flex-col gap-6">
         <section
-          className={
-            r.ready
-              ? "rounded-md border border-mask/40 bg-mask-tint px-5 py-4"
-              : "rounded-md border border-blocker/30 bg-blocker-tint px-5 py-4"
-          }
+          className={clsx(
+            "flex flex-wrap items-center gap-x-6 gap-y-2 rounded-[var(--radius-panel)] px-6 py-5",
+            r.ready ? "bg-mask-tint" : "bg-blocker-tint",
+          )}
         >
-          <h2 className="text-xl font-bold">
+          <span
+            aria-hidden
+            className={clsx("tabular text-6xl leading-none font-semibold tracking-tight", r.ready ? "text-mask" : "text-blocker")}
+          >
+            {blockers}
+          </span>
+          <div className="min-w-0 flex-1 basis-72">
+          <h2 className="text-xl font-semibold">
             {r.ready
               ? "Ready to quote"
               : `${blockers} blocker${blockers === 1 ? "" : "s"} stand between this BOM and a quote`}
@@ -62,9 +69,11 @@ export default function OverviewPage() {
             Lines without blocker or high risks:{" "}
             <FactValue fact={r.readiness_pct} kind="pct" />
           </p>
+          </div>
         </section>
 
         <Panel title="Cost by build quantity">
+          <div className="relative -mx-1 overflow-x-auto px-1">
           <table className="data-table">
             <thead>
               <tr>
@@ -77,7 +86,7 @@ export default function OverviewPage() {
             <tbody>
               {o.totals_by_volume.map((t) => (
                 <tr key={t.volume}>
-                  <td className="tabular font-bold">{quantity(t.volume)}</td>
+                  <td className="tabular font-semibold">{quantity(t.volume)}</td>
                   <td className="num">
                     <FactValue fact={t.material} kind="money" currency={o.currency} />
                   </td>
@@ -91,6 +100,7 @@ export default function OverviewPage() {
               ))}
             </tbody>
           </table>
+          </div>
           {o.unpriced_lines > 0 && (
             <p className="mt-3 text-sm text-ink-2">
               Totals exclude {o.unpriced_lines} unpriced line(s); they are listed under{" "}
@@ -106,14 +116,19 @@ export default function OverviewPage() {
           {o.next_actions.length === 0 ? (
             <p className="text-sm text-ink-2">Nothing outstanding.</p>
           ) : (
-            <ol className="divide-y divide-rule">
+            <ol className="-mx-2 flex flex-col">
               {o.next_actions.map((action, i) => (
-                <li key={i} className="flex items-center justify-between gap-4 py-2 text-sm">
-                  <span>{action.label}</span>
-                  {action.risk_id && (
-                    <Link href={`/projects/${id}/risks#${action.risk_id}`} className="shrink-0 font-bold text-mask hover:underline">
-                      Review
+                <li key={i}>
+                  {action.risk_id ? (
+                    <Link
+                      href={`/projects/${id}/risks#${action.risk_id}`}
+                      className="group flex items-center justify-between gap-4 rounded-md px-2 py-2.5 text-sm transition-colors hover:bg-mask-tint"
+                    >
+                      <span>{action.label}</span>
+                      <span className="shrink-0 font-semibold text-mask">Review</span>
                     </Link>
+                  ) : (
+                    <span className="block px-2 py-2.5 text-sm">{action.label}</span>
                   )}
                 </li>
               ))}
@@ -124,18 +139,20 @@ export default function OverviewPage() {
 
       <aside className="flex flex-col gap-6">
         <Panel title="Open risks">
-          <ul className="space-y-2">
+          <ul className="grid grid-cols-2 gap-2">
             {SEVERITIES.map((s) => (
-              <li key={s} className="flex items-center justify-between">
-                <SeverityTag severity={s} />
-                <span className="tabular text-lg font-bold">{r.unresolved_by_severity?.[s] ?? 0}</span>
+              <li key={s} className="flex flex-col gap-1.5 rounded-md bg-laminate px-3 py-2.5">
+                <span className="tabular text-3xl leading-none font-semibold">{r.unresolved_by_severity?.[s] ?? 0}</span>
+                <span className="self-start">
+                  <SeverityTag severity={s} />
+                </span>
               </li>
             ))}
           </ul>
-          <p className="mt-4 border-t border-rule pt-3 text-sm text-ink-2">
+          <p className="mt-4 text-sm text-ink-2">
             Spend on lines with blocker or high risks: <FactValue fact={r.spend_at_risk_pct} kind="pct" />
           </p>
-          <Link href={`/projects/${id}/risks`} className="mt-3 inline-block text-sm font-bold text-mask hover:underline">
+          <Link href={`/projects/${id}/risks`} className="mt-3 inline-block text-sm font-semibold text-mask hover:underline">
             Review all {r.total} risks
           </Link>
         </Panel>

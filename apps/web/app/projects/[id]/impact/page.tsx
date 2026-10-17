@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { FactValue } from "@/components/fact";
-import { Button, ErrorNote, Field, Panel, Spinner } from "@/components/ui";
+import { Button, ErrorNote, Field, PageSkeleton, Panel } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api/client";
 import { useAssumptions, useImpact, useLines, useProject, useProjectMutation } from "@/lib/api/hooks";
 import { money, quantity, toNumber } from "@/lib/format";
@@ -42,8 +42,8 @@ export default function ImpactPage() {
             onClick={() => setVolume(v)}
             className={
               v === volume
-                ? "rounded border border-mask bg-mask px-3 py-1 text-sm font-bold text-silk"
-                : "rounded border border-rule-strong bg-silk px-3 py-1 text-sm hover:border-mask"
+                ? "rounded-md bg-mask px-3 py-1.5 text-sm font-semibold text-silk transition-colors"
+                : "rounded-md bg-silk px-3 py-1.5 text-sm transition-colors hover:bg-mask-tint hover:text-mask active:translate-y-px"
             }
           >
             {quantity(v)} boards
@@ -51,10 +51,10 @@ export default function ImpactPage() {
         ))}
       </div>
 
-      {impact.isPending && <Spinner />}
+      {impact.isPending && <PageSkeleton />}
       <ErrorNote error={impact.error} />
       {impact.data && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="flex flex-col gap-6">
             <Panel title="Where the money goes">
               <Waterfall steps={impact.data.waterfall} currency={currency} />
@@ -62,7 +62,7 @@ export default function ImpactPage() {
 
             {impact.data.recommendations.length > 0 && (
               <Panel title="Cheaper order quantities">
-                <ul className="divide-y divide-rule text-sm">
+                <ul className="flex flex-col gap-1 text-sm">
                   {impact.data.recommendations.slice(0, 6).map((r) => (
                     <li key={r.line_id + r.message} className="flex items-baseline justify-between gap-4 py-2">
                       <span>{r.message}</span>
@@ -74,7 +74,7 @@ export default function ImpactPage() {
             )}
 
             <Panel title="Cost per line">
-              <div className="max-h-[32rem] overflow-auto">
+              <div className="relative max-h-[32rem] overflow-auto">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -117,8 +117,8 @@ export default function ImpactPage() {
                 <dd className="text-right">
                   <FactValue fact={impact.data.totals.adders} kind="money" currency={currency} />
                 </dd>
-                <dt className="font-bold">Total</dt>
-                <dd className="text-right font-bold">
+                <dt className="font-semibold">Total</dt>
+                <dd className="text-right font-semibold">
                   <FactValue fact={impact.data.totals.grand_total} kind="money" currency={currency} />
                 </dd>
                 <dt>Per board</dt>
@@ -149,7 +149,7 @@ function Waterfall({ steps, currency }: { steps: Schemas["WaterfallStep"][]; cur
         const isTotal = step.label === "Total";
         return (
           <li key={step.label} className="grid grid-cols-[10rem_1fr_9rem] items-center gap-3 text-sm">
-            <span className={isTotal ? "font-bold" : undefined}>{step.label}</span>
+            <span className={isTotal ? "font-semibold" : undefined}>{step.label}</span>
             <span className="h-3 rounded-sm bg-laminate">
               <span className={`block h-3 rounded-sm ${isTotal ? "bg-mask" : "bg-mask/55"}`} style={{ width: `${width}%` }} />
             </span>
@@ -196,7 +196,7 @@ function ImpactRow({
           <FactValue fact={line.contribution_pct} kind="pct" />
         </td>
         <td>
-          <Button variant="quiet" onClick={onToggle} aria-expanded={open}>
+          <Button variant="quiet" className="whitespace-nowrap" onClick={onToggle} aria-expanded={open}>
             {open ? "Hide steps" : "Show steps"}
           </Button>
         </td>
@@ -207,7 +207,7 @@ function ImpactRow({
             <ol className="flex flex-col gap-1 py-1">
               {line.trace?.map((step, i) => (
                 <li key={i} className="grid grid-cols-[12rem_1fr_auto] gap-3 text-xs">
-                  <span className="font-bold">{step.label}</span>
+                  <span className="font-semibold">{step.label}</span>
                   <span className="tabular text-ink-2">{step.formula}</span>
                   <FactValue fact={step.output} kind={step.label.includes("cost") || step.label.startsWith("Unit") ? "money" : step.label.startsWith("Scrap") ? "pct" : "qty"} currency={currency} />
                 </li>
@@ -254,8 +254,8 @@ function WhatIf({
         }}
       >
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-bold text-ink-2">Line</span>
-          <select value={lineId} onChange={(e) => setLineId(e.target.value)} className="rounded border border-rule-strong bg-silk px-2 py-1.5">
+          <span className="font-semibold text-ink-2">Line</span>
+          <select value={lineId} onChange={(e) => setLineId(e.target.value)} className="rounded-md border border-rule-strong bg-silk px-2 py-1.5">
             <option value="">Choose a line</option>
             {lines.map((l) => (
               <option key={l.line_id} value={l.line_id}>

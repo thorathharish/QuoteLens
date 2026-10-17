@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { FactValue, useEvidence } from "@/components/fact";
 import { LineDialog } from "@/components/line-detail";
-import { Button, Dialog, Empty, ErrorNote, SeverityTag, Spinner, TextArea } from "@/components/ui";
+import { Button, Dialog, Empty, ErrorNote, PageSkeleton, SeverityTag, Tag, TextArea } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api/client";
 import { useInvalidateProject, useLines, useRisks } from "@/lib/api/hooks";
 import { sentence } from "@/lib/format";
@@ -30,7 +30,7 @@ export default function RisksPage() {
   const [reviewing, setReviewing] = useState<{ risk: Risk; decision: Decision } | null>(null);
   const [lineId, setLineId] = useState<string | null>(null);
 
-  if (risks.isPending) return <Spinner />;
+  if (risks.isPending) return <PageSkeleton rows={8} label="Loading risks" />;
   if (risks.error) return <ErrorNote error={risks.error} />;
   const labels = new Map((lines.data?.items ?? []).map((l) => [l.id, l.mpn ?? l.refdes?.join(", ") ?? l.id]));
   const visible = risks.data.items.filter(
@@ -46,8 +46,8 @@ export default function RisksPage() {
             : `${risks.data.summary.open_blockers} open blocker(s).`}{" "}
           Every risk below says why it was raised and links to its evidence.
         </p>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
+        <label className="flex items-center gap-2 text-sm text-ink-2">
+          <input type="checkbox" className="h-4 w-4 accent-mask" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
           Show resolved and waived
         </label>
       </div>
@@ -59,7 +59,7 @@ export default function RisksPage() {
         if (group.length === 0) return null;
         return (
           <section key={severity} aria-labelledby={`sev-${severity}`}>
-            <h2 id={`sev-${severity}`} className="mb-3 flex items-center gap-3 text-base font-bold">
+            <h2 id={`sev-${severity}`} className="mb-3 flex items-center gap-3 text-lg font-semibold">
               <SeverityTag severity={severity} />
               <span>{HEADINGS[severity]}</span>
             </h2>
@@ -101,16 +101,16 @@ function RiskItem({
     <li
       id={risk.id}
       className={clsx(
-        "rounded-md border bg-silk px-4 py-3 target:ring-2 target:ring-mask",
-        risk.severity === "BLOCKER" ? "border-blocker/40" : "border-rule",
+        "scroll-mt-6 rounded-[var(--radius-panel)] bg-silk px-5 py-4 target:ring-2 target:ring-mask",
+        risk.severity === "BLOCKER" && !closed && "border-l-4 border-blocker",
         closed && "opacity-70",
       )}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-bold">
+        <h3 className="font-semibold">
           {risk.title}
           {part && (
-            <button onClick={onOpenLine} className="code ml-2 font-medium text-mask hover:underline">
+            <button onClick={onOpenLine} className="code ml-2 rounded-sm font-medium text-mask hover:underline">
               {part}
             </button>
           )}
@@ -121,25 +121,29 @@ function RiskItem({
               Line cost <FactValue fact={risk.cost_exposure} kind="money" />
             </span>
           )}
-          <span className={clsx("font-bold", closed ? "text-mask" : "text-ink-2")}>{sentence(risk.status ?? "OPEN")}</span>
+          <Tag tone={closed ? "mask" : "neutral"}>{sentence(risk.status ?? "OPEN")}</Tag>
         </span>
       </div>
       <p className="mt-1 max-w-[75ch] leading-relaxed">{risk.why}</p>
       {risk.resolution_note && <p className="mt-1 text-sm text-ink-2">Note: {risk.resolution_note}</p>}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button variant="quiet" onClick={() => evidence.open({ evidence_ids: risk.evidence_ids })}>
+      {risk.suggested_actions?.length ? (
+        <p className="mt-2 text-sm text-ink-2">Suggested: {risk.suggested_actions.map((a) => a.label).join("; ")}</p>
+      ) : null}
+      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2">
+        <Button variant="quiet" className="-ml-1.5" onClick={() => evidence.open({ evidence_ids: risk.evidence_ids })}>
           Show evidence ({risk.evidence_ids.length})
         </Button>
-        {risk.suggested_actions?.length ? (
-          <span className="text-sm text-ink-2">Suggested: {risk.suggested_actions.map((a) => a.label).join("; ")}</span>
-        ) : null}
         {!closed && (
-          <span className="ml-auto flex gap-2">
-            {risk.status === "OPEN" && <Button onClick={() => onDecide("ACKNOWLEDGED")}>Acknowledge</Button>}
-            <Button onClick={() => onDecide("RESOLVED")}>Mark resolved</Button>
+          <span className="ml-auto flex flex-wrap items-center gap-1">
+            {risk.status === "OPEN" && (
+              <Button variant="quiet" onClick={() => onDecide("ACKNOWLEDGED")}>
+                Acknowledge
+              </Button>
+            )}
             <Button variant="danger" onClick={() => onDecide("WAIVED")}>
               Waive
             </Button>
+            <Button onClick={() => onDecide("RESOLVED")}>Mark resolved</Button>
           </span>
         )}
       </div>

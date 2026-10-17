@@ -6,7 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { CopilotDrawer } from "@/components/copilot";
 import { EvidenceProvider, ProvenanceLegend } from "@/components/fact";
 import { RoleSwitcher } from "@/components/role";
-import { Button, ErrorNote, Spinner } from "@/components/ui";
+import { Button, ErrorNote, PageSkeleton, Spinner } from "@/components/ui";
 import { DataModeTag, ProjectTabs, StatusTag, TraceStepper } from "@/components/workspace";
 import { useInvalidateProject, useJob, useProject } from "@/lib/api/hooks";
 
@@ -17,48 +17,52 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
 
   return (
     <EvidenceProvider projectId={id}>
-      <div className="min-h-screen">
-        <header className="border-b border-rule bg-silk">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-3">
-            <div className="flex min-w-0 items-center gap-4">
-              <Link href="/" className="font-bold text-mask">
+      <div className="flex min-h-dvh flex-col">
+        <header className="bg-silk">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-3.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+              <Link href="/" className="rounded-md text-lg font-bold tracking-tight text-mask">
                 QuoteLens
               </Link>
               {project.data && (
                 <>
-                  <h1 className="truncate text-lg font-bold">{project.data.name}</h1>
-                  <StatusTag status={project.data.status} />
-                  <DataModeTag mode={project.data.data_mode} />
+                  <h1 className="truncate text-lg font-semibold">{project.data.name}</h1>
+                  <span className="flex items-center gap-2">
+                    <StatusTag status={project.data.status} />
+                    <DataModeTag mode={project.data.data_mode} />
+                  </span>
                 </>
               )}
             </div>
             <div className="flex items-center gap-4">
               <RoleSwitcher />
-              <Button variant="primary" onClick={() => setCopilotOpen(true)}>
+              <Button variant="primary" onClick={() => setCopilotOpen(true)} aria-expanded={copilotOpen}>
                 Ask copilot
               </Button>
             </div>
           </div>
-          <div className="mx-auto max-w-7xl px-6 pt-1 pb-3">
+        </header>
+        <div className="bg-laminate-2">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 pt-4">
             {project.data && <TraceStepper status={project.data.status} />}
-          </div>
-          <div className="mx-auto max-w-7xl px-6">
             <ProjectTabs projectId={id} />
           </div>
-        </header>
+        </div>
 
         <Suspense>
           <JobBanner projectId={id} />
         </Suspense>
 
-        <main className="mx-auto max-w-7xl px-6 py-6">
-          {project.isPending && <Spinner />}
+        <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-6 py-8">
+          {project.isPending && <PageSkeleton />}
           <ErrorNote error={project.error} />
           {project.data && children}
         </main>
 
-        <footer className="mx-auto max-w-7xl border-t border-rule px-6 py-4">
-          <ProvenanceLegend />
+        <footer className="bg-laminate-2">
+          <div className="mx-auto max-w-7xl px-6 py-4">
+            <ProvenanceLegend />
+          </div>
         </footer>
       </div>
       <CopilotDrawer projectId={id} open={copilotOpen} onClose={() => setCopilotOpen(false)} />
@@ -85,7 +89,7 @@ function JobBanner({ projectId }: { projectId: string }) {
   const failed = status === "FAILED";
   return (
     <div role="status" className={failed ? "bg-blocker-tint" : "bg-mask-tint"}>
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-2.5 text-sm">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-6 py-3 text-sm">
         {failed ? (
           <span className="text-blocker">
             Analysis failed: {job.data.error?.message ?? "unknown error"}. Fix the mapping or file and try again.

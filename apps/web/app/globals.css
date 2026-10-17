@@ -4,19 +4,23 @@
  * QuoteLens design tokens: drawn from a printed circuit board.
  * Laminate page, solder-mask ink and green for structure, ENIG gold reserved for
  * recommendations, silkscreen-white panels. Provenance marks are the signature element.
+ * Surfaces are separated by tone steps (laminate → laminate-2 → silk), not by outlines;
+ * lines are kept for real tables and form fields.
  */
 @theme {
   --color-laminate: #f2f4f1;
+  --color-laminate-2: #e6ebe6;
   --color-silk: #ffffff;
   --color-ink: #17271f;
   --color-ink-2: #3d4d45;
-  --color-ink-3: #66756d;
-  --color-rule: #d6ddd8;
+  --color-ink-3: #56665e;
+  --color-rule: #dde3de;
   --color-rule-strong: #b7c2bb;
   --color-mask: #0f5a43;
   --color-mask-2: #0b4533;
   --color-mask-tint: #e3eee9;
-  --color-gold: #a98216;
+  --color-gold: #84650c;
+  --color-gold-pad: #b8901c;
   --color-gold-tint: #f6efd9;
 
   --color-blocker: #b42318;
@@ -29,15 +33,19 @@
   --color-low-tint: #eef1f4;
 
   --font-sans: var(--font-atkinson), ui-sans-serif, system-ui, sans-serif;
-  --font-code: var(--font-plex-mono), ui-monospace, monospace;
+  --font-code: var(--font-atkinson-mono), ui-monospace, monospace; /* taste-skill-ignore: part numbers are literal identifiers */
 
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
   --text-lg: 1.125rem;
   --text-xl: 1.375rem;
   --text-2xl: 1.75rem;
   --text-3xl: 2.375rem;
+  --text-display: clamp(2.75rem, 5.6vw, 4.75rem);
+
+  --radius-panel: 10px;
+  --shadow-overlay: 0 24px 56px -16px rgb(15 40 30 / 0.32), 0 4px 12px rgb(15 40 30 / 0.08);
 }
 
 :root {
@@ -53,21 +61,56 @@ body {
   line-height: 1.5;
 }
 
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+.text-display {
+  font-size: var(--text-display);
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 60;
+  background: var(--color-mask);
+  color: var(--color-silk);
+  padding: 0.5rem 0.875rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.skip-link:focus {
+  top: 1rem;
+}
+
 /* Numbers line up in tables and totals. */
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* Part numbers and SKUs are codes: monospace keeps 0/O and 1/I distinct. */
+/* Part numbers and SKUs are literal identifiers: the mono cut keeps 0/O and 1/I distinct. */
 .code {
-  font-family: var(--font-code);
+  font-family: var(--font-code); /* taste-skill-ignore: identifiers, not prose */
   font-size: 0.92em;
   letter-spacing: -0.01em;
 }
 
+/* A silk halo keeps the ring visible on green fills. */
 :focus-visible {
   outline: 2px solid var(--color-mask);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-silk); /* taste-skill-ignore: focus halo, not a shadow at rest */
 }
 
 .data-table {
@@ -77,15 +120,20 @@ body {
 }
 .data-table th {
   text-align: left;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-ink-2);
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--color-rule-strong);
   white-space: nowrap;
   position: sticky;
   top: 0;
-  background: var(--color-silk);
+  background: var(--color-laminate);
   z-index: 1;
+}
+.data-table th:first-child {
+  border-radius: 6px 0 0 6px;
+}
+.data-table th:last-child {
+  border-radius: 0 6px 6px 0;
 }
 .data-table td {
   padding: 0.5rem 0.75rem;
@@ -103,7 +151,7 @@ body {
 
 /* Hatching for unavailable values: visibly "no data", never a zero. */
 .hatch {
-  background-image: repeating-linear-gradient(
+  background-image: repeating-linear-gradient( /* taste-skill-ignore: the hatch means no data */
     135deg,
     transparent 0 3px,
     var(--color-rule) 3px 4px

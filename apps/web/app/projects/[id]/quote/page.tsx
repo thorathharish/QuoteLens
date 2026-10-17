@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { FactValue } from "@/components/fact";
-import { Button, Empty, ErrorNote, Field, Panel, Spinner, Tag } from "@/components/ui";
+import { Button, Empty, ErrorNote, Field, PageSkeleton, Panel, Tag } from "@/components/ui";
 import { api, getRole, unwrap, type Schemas } from "@/lib/api/client";
 import { useProject, useProjectMutation, useQuotes, useRisks } from "@/lib/api/hooks";
 import { dateTime, quantity, sentence } from "@/lib/format";
@@ -25,7 +25,7 @@ export default function QuotePage() {
     unwrap(api.POST("/api/v1/projects/{pid}/reopen", { params: { path: { pid: id } }, body: { reason: "New revision requested" } })),
   );
 
-  if (quotes.isPending || project.isPending) return <Spinner />;
+  if (quotes.isPending || project.isPending) return <PageSkeleton />;
   if (quotes.error) return <ErrorNote error={quotes.error} />;
   const finalized = project.data?.status === "FINALIZED";
   const blockers = (risks.data?.items ?? []).filter(
@@ -54,7 +54,7 @@ export default function QuotePage() {
       </Panel>
 
       {finalized ? (
-        <div className="flex items-center gap-4 rounded-md border border-mask/40 bg-mask-tint px-4 py-3">
+        <div className="flex items-center gap-4 rounded-[var(--radius-panel)] bg-mask-tint px-5 py-4">
           <span>This project is finalized and read-only.</span>
           <Button onClick={() => reopen.mutate(undefined)} disabled={reopen.isPending}>
             Start a new revision
@@ -161,7 +161,7 @@ function QuoteVersionPanel({
         <tbody>
           {quote.volumes.map((v) => (
             <tr key={v.volume}>
-              <td className="tabular font-bold">{quantity(v.volume)}</td>
+              <td className="tabular font-semibold">{quantity(v.volume)}</td>
               <td className="num">
                 <FactValue fact={v.material} kind="money" currency={quote.currency} />
               </td>
@@ -180,7 +180,7 @@ function QuoteVersionPanel({
       </table>
       {latest && quote.status === "DRAFT" && (
         <form
-          className="mt-4 flex flex-wrap items-end gap-3 border-t border-rule pt-4"
+          className="mt-4 flex flex-wrap items-end gap-3 pt-4"
           onSubmit={(e) => {
             e.preventDefault();
             finalize.mutate(undefined);

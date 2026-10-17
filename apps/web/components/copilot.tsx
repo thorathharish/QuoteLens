@@ -41,6 +41,15 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
   const [turns, setTurns] = useState<Turn[]>([]);
   const [question, setQuestion] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+
+  // Opening the drawer puts the cursor in the question box (after the frame in which it
+  // stops being invisible: hidden elements cannot take focus).
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => input.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
   const evidence = useEvidence();
 
   const session = useQuery({
@@ -99,25 +108,33 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
   };
 
   return (
+    // inert (not aria-hidden) keeps the closed drawer out of the tab order too.
     <aside
       aria-label="Copilot"
-      aria-hidden={!open}
+      inert={!open}
       className={clsx(
-        "fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-rule-strong bg-silk shadow-2xl transition-transform duration-200",
-        open ? "translate-x-0" : "pointer-events-none translate-x-full",
+        "fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col bg-silk",
+        // Visible at once when opening (so focus can land); hidden only after the slide-out.
+        open
+          ? "visible translate-x-0 shadow-[var(--shadow-overlay)] [transition:transform_200ms]" // taste-skill-ignore: open drawer floats
+          : "invisible translate-x-full [transition:transform_200ms,visibility_0s_200ms]",
       )}
     >
-      <header className="flex items-center justify-between border-b border-rule px-4 py-3">
+      <header className="flex items-start justify-between gap-4 bg-laminate-2 px-5 py-4">
         <div>
-          <h2 className="font-bold">Copilot</h2>
-          <p className="text-xs text-ink-3">Answers only from this project&apos;s data, with sources.</p>
+          <h2 className="text-lg font-semibold">Copilot</h2>
+          <p className="text-sm text-ink-2">Answers only from this project&apos;s data, with sources.</p>
         </div>
-        <button onClick={onClose} className="rounded px-2 text-2xl leading-none text-ink-3 hover:text-ink" aria-label="Close copilot">
+        <button
+          onClick={onClose}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-2xl leading-none text-ink-3 transition-colors hover:bg-laminate hover:text-ink"
+          aria-label="Close copilot"
+        >
           ×
         </button>
       </header>
 
-      <div ref={scroller} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+      <div ref={scroller} className="relative flex-1 space-y-5 overflow-y-auto px-5 py-5">
         <ErrorNote error={session.error} />
         {turns.length === 0 && (
           <div className="space-y-2">
@@ -126,7 +143,7 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
               <button
                 key={s}
                 onClick={() => submit(s)}
-                className="block w-full rounded border border-rule px-3 py-2 text-left text-sm hover:border-mask"
+                className="block w-full rounded-md bg-laminate px-3 py-2.5 text-left text-sm transition-colors hover:bg-mask-tint hover:text-mask active:translate-y-px"
               >
                 {s}
               </button>
@@ -153,7 +170,7 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
               {turn.content && <p className="whitespace-pre-wrap leading-relaxed">{stripCitations(turn.content)}</p>}
               {turn.error && <ErrorNote error={turn.error} />}
               {turn.grounded === false && (
-                <p className="rounded border border-medium/40 bg-medium-tint px-2 py-1 text-xs text-medium">
+                <p className="rounded-md bg-medium-tint px-2.5 py-1.5 text-xs text-medium">
                   Not verified: {turn.unverified.join(", ")} could not be traced to project data. Check before relying on it.
                 </p>
               )}
@@ -163,7 +180,7 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
                     <button
                       key={c.evidence_id}
                       onClick={() => evidence.open({ evidence_ids: [c.evidence_id] })}
-                      className="rounded-sm border border-rule px-1.5 py-0.5 text-xs text-mask hover:border-mask"
+                      className="rounded-sm bg-mask-tint px-1.5 py-0.5 text-xs font-semibold text-mask transition-colors hover:bg-mask hover:text-silk"
                     >
                       {c.label}
                     </button>
@@ -176,7 +193,7 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
       </div>
 
       <form
-        className="flex gap-2 border-t border-rule px-4 py-3"
+        className="flex gap-2 bg-laminate-2 px-5 py-4"
         onSubmit={(e) => {
           e.preventDefault();
           submit(question);
@@ -186,11 +203,12 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
           Question
         </label>
         <input
+          ref={input}
           id="copilot-question"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask about this BOM"
-          className="min-w-0 flex-1 rounded border border-rule-strong px-2.5 py-1.5"
+          className="min-w-0 flex-1 rounded-md border border-rule-strong bg-silk px-3 py-2"
         />
         <Button variant="primary" type="submit" disabled={ask.isPending || !question.trim() || !session.data}>
           Ask

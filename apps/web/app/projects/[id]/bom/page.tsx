@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FactValue } from "@/components/fact";
 import { LineDialog } from "@/components/line-detail";
-import { ErrorNote, Spinner, Tag } from "@/components/ui";
+import { ErrorNote, PageSkeleton, Tag } from "@/components/ui";
 import { useLines } from "@/lib/api/hooks";
 import { sentence } from "@/lib/format";
 
@@ -40,7 +40,7 @@ export default function BomPage() {
     );
   }, [lines.data, issue, query]);
 
-  if (lines.isPending) return <Spinner />;
+  if (lines.isPending) return <PageSkeleton />;
   if (lines.error) return <ErrorNote error={lines.error} />;
   const counts = Object.entries(lines.data.issue_counts ?? {});
 
@@ -55,11 +55,11 @@ export default function BomPage() {
             onClick={() => setIssue(issue === code ? null : code)}
             aria-pressed={issue === code}
             className={clsx(
-              "rounded border px-2.5 py-1 text-sm",
-              issue === code ? "border-mask bg-mask text-silk" : "border-rule-strong bg-silk hover:border-mask",
+              "rounded-md px-3 py-1.5 text-sm transition-colors active:translate-y-px",
+              issue === code ? "bg-mask text-silk" : "bg-silk hover:bg-mask-tint hover:text-mask",
             )}
           >
-            {ISSUE_LABEL[code] ?? sentence(code)} <span className="tabular font-bold">{count}</span>
+            {ISSUE_LABEL[code] ?? sentence(code)} <span className="tabular font-semibold">{count}</span>
           </button>
         ))}
         <input
@@ -68,11 +68,11 @@ export default function BomPage() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search part, maker, designator"
           aria-label="Search lines"
-          className="ml-auto w-72 rounded border border-rule-strong bg-silk px-2.5 py-1.5 text-sm"
+          className="ml-auto w-72 rounded-md border border-rule-strong bg-silk px-2.5 py-1.5 text-sm"
         />
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-rule bg-silk">
+      <div className="relative overflow-x-auto rounded-[var(--radius-panel)] bg-silk p-2">
         <table className="data-table">
           <thead>
             <tr>

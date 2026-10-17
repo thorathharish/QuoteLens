@@ -7,6 +7,8 @@ export function toNumber(value: string | number | null | undefined): number | nu
   return Number.isFinite(n) ? n : null;
 }
 
+/** Cents for amounts of one unit or more ($524.89); sub-unit part prices keep up to four
+ * decimals ($0.0047), where the extra digits change a quote. */
 export function money(value: string | number | null | undefined, currency = "USD", digits = 2): string {
   const n = toNumber(value);
   if (n === null) return "—";
@@ -14,7 +16,7 @@ export function money(value: string | number | null | undefined, currency = "USD
     style: "currency",
     currency,
     minimumFractionDigits: digits,
-    maximumFractionDigits: Math.max(digits, 4),
+    maximumFractionDigits: Math.abs(n) >= 1 ? digits : Math.max(digits, 4),
   }).format(n);
 }
 
