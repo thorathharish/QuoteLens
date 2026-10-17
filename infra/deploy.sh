@@ -6,11 +6,16 @@
 # Options (environment variables):
 #   REGION=us-central1            TAG=<git short sha>         SKIP_BUILD=1 (reuse TAG images)
 #   CATALOG_BACKEND=seed|bigquery (bigquery after the catalog is loaded, see issue #3)
-#   LLM_ENABLED=true|false        GEMINI_FLASH_MODEL / GEMINI_PRO_MODEL (see issue #8)
+#   LLM_ENABLED=true|false
+#   LLM_PROVIDER=openrouter|vertex   default openrouter: Google's Gemini models through OpenRouter,
+#                                    paid from the OpenRouter balance (no Vertex AI spend on GCP).
+#                                    Needs the openrouter-api-key secret (run secrets.sh first).
+#                                    vertex: Gemini on Vertex AI, billed to the GCP project.
+#   OPENROUTER_FLASH_MODEL / OPENROUTER_PRO_MODEL, or GEMINI_FLASH_MODEL / GEMINI_PRO_MODEL (vertex)
 #
 # Topology (all scale to zero; demo-mode.sh keeps web+api warm only during the demo):
 #   web    public          → calls api with an ID token (web SA has run.invoker on api)
-#   api    private         → publishes jobs to Pub/Sub
+#   api    private         → publishes jobs to Pub/Sub; calls the LLM (OpenRouter or Vertex AI)
 #   worker private         ← Pub/Sub push with OIDC (push SA has run.invoker on worker)
 set -euo pipefail
 
@@ -21,8 +26,15 @@ REPO="quotelens"
 BUCKET="${BUCKET:-${PROJECT_ID}-quotelens}"
 CATALOG_BACKEND="${CATALOG_BACKEND:-seed}"
 LLM_ENABLED="${LLM_ENABLED:-true}"
+LLM_PROVIDER="${LLM_PROVIDER:-openrouter}"
 GEMINI_FLASH_MODEL="${GEMINI_FLASH_MODEL:-gemini-2.5-flash}"
 GEMINI_PRO_MODEL="${GEMINI_PRO_MODEL:-gemini-2.5-pro}"
+OPENROUTER_FLASH_MODEL="${OPENROUTER_FLASH_MODEL:-google/gemini-2.5-flash}"
+OPENROUTER_PRO_MODEL="${OPENROUTER_PRO_MODEL:-google/gemini-2.5-pro}"
+case "$LLM_PROVIDER" in
+  openrouter | vertex) ;;
+  *) echo "LLM_PROVIDER must be openrouter or vertex (got '$LLM_PROVIDER')"; exit 1 ;;
+esac
 TOPIC="analysis-jobs"
 DLQ_TOPIC="analysis-jobs-dlq"
 SUBSCRIPTION="analysis-jobs-push"
@@ -32,6 +44,15 @@ sa() { echo "quotelens-$1@${PROJECT_ID}.iam.gserviceaccount.com"; }
 log() { printf '\n==> %s\n' "$*"; }
 url_of() { gcloud run services describe "$1" --region="$REGION" --project="$PROJECT_ID" --format='value(status.url)'; }
 run() { gcloud "$@" --project="$PROJECT_ID" --quiet; }
+secret_exists() { gcloud secrets describe "$1" --project="$PROJECT_ID" >/dev/null 2>&1; }
+
+# Fail before building anything if the copilot would be deployed without its key.
+if [[ "$LLM_ENABLED" == "true" && "$LLM_PROVIDER" == "openrouter" ]] && ! secret_exists openrouter-api-key; then
+  echo "No 'openrouter-api-key' secret in ${PROJECT_ID}. Put OPENROUTER_API_KEY in services/api/.env, then run:"
+  echo "  PROJECT_ID=${PROJECT_ID} ./infra/secrets.sh"
+  echo "or deploy without the LLM:  LLM_ENABLED=false PROJECT_ID=${PROJECT_ID} ./infra/deploy.sh"
+  exit 1
+fi
 
 if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   log "Building images (tag $TAG) with Cloud Build"
@@ -41,10 +62,14 @@ fi
 
 # Secrets that exist are mounted as env vars; missing ones are simply not configured.
 SECRET_FLAGS=()
-for pair in DIGIKEY_CLIENT_ID=digikey-client-id DIGIKEY_CLIENT_SECRET=digikey-client-secret \
-            MOUSER_API_KEY=mouser-api-key ELEMENT14_API_KEY=element14-api-key; do
+PAIRS=(DIGIKEY_CLIENT_ID=digikey-client-id DIGIKEY_CLIENT_SECRET=digikey-client-secret
+       MOUSER_API_KEY=mouser-api-key ELEMENT14_API_KEY=element14-api-key)
+if [[ "$LLM_PROVIDER" == "openrouter" ]]; then
+  PAIRS+=(OPENROUTER_API_KEY=openrouter-api-key)
+fi
+for pair in "${PAIRS[@]}"; do
   secret="${pair#*=}"
-  if gcloud secrets describe "$secret" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  if secret_exists "$secret"; then
     SECRET_FLAGS+=("${pair%%=*}=${secret}:latest")
   fi
 done
@@ -55,8 +80,10 @@ fi
 
 COMMON_ENV="ENV=prod,GCP_PROJECT=${PROJECT_ID},GCP_REGION=${REGION},GCS_BUCKET=${BUCKET}"
 COMMON_ENV+=",STORAGE_BACKEND=firestore,BLOB_BACKEND=gcs,CATALOG_BACKEND=${CATALOG_BACKEND}"
-COMMON_ENV+=",JOB_BACKEND=pubsub,PUBSUB_TOPIC=${TOPIC},LLM_ENABLED=${LLM_ENABLED}"
+COMMON_ENV+=",JOB_BACKEND=pubsub,PUBSUB_TOPIC=${TOPIC}"
+COMMON_ENV+=",LLM_ENABLED=${LLM_ENABLED},LLM_PROVIDER=${LLM_PROVIDER}"
 COMMON_ENV+=",GEMINI_FLASH_MODEL=${GEMINI_FLASH_MODEL},GEMINI_PRO_MODEL=${GEMINI_PRO_MODEL}"
+COMMON_ENV+=",OPENROUTER_FLASH_MODEL=${OPENROUTER_FLASH_MODEL},OPENROUTER_PRO_MODEL=${OPENROUTER_PRO_MODEL}"
 COMMON_ENV+=",DATA_MODE=cache_first,LOG_LEVEL=INFO"
 
 log "Deploying worker (private, Pub/Sub push target)"

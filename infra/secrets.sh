@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Copy distributor API keys from services/api/.env into Secret Manager (values never printed).
-# Free tier: 6 active secret versions; this uses at most 4 (old versions are disabled).
+# Copy the API keys from services/api/.env into Secret Manager (values never printed):
+# the distributor keys and the OpenRouter key the deployed copilot uses.
+# Free tier: 6 active secret versions; this uses at most 5 (old versions are disabled).
 #
 # Usage: PROJECT_ID=my-project ./infra/secrets.sh
 set -euo pipefail
@@ -37,3 +38,4 @@ store DIGIKEY_CLIENT_ID digikey-client-id
 store DIGIKEY_CLIENT_SECRET digikey-client-secret
 store MOUSER_API_KEY mouser-api-key
 store ELEMENT14_API_KEY element14-api-key
+store OPENROUTER_API_KEY openrouter-api-key

@@ -4,7 +4,7 @@ Takes about 2 minutes. Do it once a day and after each milestone. Background is 
 
 ## 1. Credit and spend
 - **Billing → Overview:** remaining credit and days left in the trial.
-- **Billing → Reports:** group by **SKU** for the last 7 days. Expect spend to be almost all **Vertex AI (Gemini)**, with everything else at or near 0.
+- **Billing → Reports:** group by **SKU** for the last 7 days. With the default `LLM_PROVIDER=openrouter`, expect everything at or near 0 (Gemini is billed by OpenRouter, not GCP; check the balance at openrouter.ai/credits). With `LLM_PROVIDER=vertex`, expect spend to be almost all **Vertex AI (Gemini)**.
 - **Billing → Budgets & alerts:** `quotelens-hackathon` exists. Budgets only alert; they do not stop spend.
 
 ## 2. Usage against the Always Free tier
@@ -19,6 +19,6 @@ Takes about 2 minutes. Do it once a day and after each milestone. Background is 
 
 ## 3. If spend is climbing
 1. Check that `min-instances` is 0: `gcloud run services describe quotelens-api --region us-central1 --format='value(spec.template.metadata.annotations)'`. Run `infra/demo-mode.sh off` if it isn't.
-2. Gemini: set `GEMINI_PRO_MODEL` to the Flash model and lower `LLM_MAX_OUTPUT_TOKENS`.
+2. Gemini: point the Pro model at Flash (`OPENROUTER_PRO_MODEL=google/gemini-2.5-flash`, or `GEMINI_PRO_MODEL` on Vertex) and lower `LLM_MAX_OUTPUT_TOKENS`.
 3. Emergency: set `LLM_ENABLED=false` on api and worker. Everything keeps working with template explanations.
 4. After judging: run `infra/teardown.sh`.

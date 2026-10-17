@@ -42,7 +42,7 @@ flowchart LR
   api & worker --> fs[(Firestore)]
   api & worker --> bq[(BigQuery<br/>catalog + cache)]
   api & worker --> gcs[(Cloud Storage)]
-  api & worker --> vx{{Gemini on Vertex AI}}
+  api & worker --> vx{{Gemini via OpenRouter<br/>or Vertex AI}}
   worker --> dist[Nexar · DigiKey · Mouser]
 ```
 **Design principle:** a deterministic core with the LLM at the edges. Plain, tested code calculates every price, risk and impact number. Gemini maps columns, explains results, investigates alternates and powers the copilot. It never produces the financial numbers.
@@ -52,7 +52,7 @@ flowchart LR
 |---|---|
 | Frontend | Next.js (App Router, TypeScript), Tailwind, shadcn/ui, TanStack Query/Table |
 | Backend | Python 3.12, FastAPI, Pydantic v2, LangChain + LangGraph |
-| AI | Gemini on Vertex AI |
+| AI | Google Gemini 2.5 Flash / Pro, through OpenRouter (default) or Vertex AI (`LLM_PROVIDER`) |
 | Data | Firestore (app state), BigQuery (component catalog, price cache, analytics), Cloud Storage (files) |
 | Async | Pub/Sub → Cloud Run worker (inline fallback) |
 | Ops | Cloud Run, Cloud Build, Artifact Registry, Secret Manager, Cloud Logging |
@@ -101,8 +101,8 @@ cd apps/web && pnpm install && pnpm dev                    # http://localhost:30
 **Deploy to GCP (free credits)**, from the repo root in Git Bash, in this order:
 1. `PROJECT_ID=<id> BILLING_ACCOUNT=<id> BUDGET_CURRENCY=<USD|INR> ./infra/bootstrap.sh` (once): enables the APIs and creates service accounts, Firestore, the bucket, BigQuery, Pub/Sub, Artifact Registry and budget alerts.
 2. `cd services/api && uv run python scripts/load_catalog.py --project <id>` (optional, for `CATALOG_BACKEND=bigquery`).
-3. `PROJECT_ID=<id> ./infra/secrets.sh`: copies the distributor keys from `services/api/.env` to Secret Manager.
-4. `PROJECT_ID=<id> ./infra/deploy.sh`: builds both images with Cloud Build and deploys web (public), api and worker (private), plus the Pub/Sub push subscription.
+3. `PROJECT_ID=<id> ./infra/secrets.sh`: copies the distributor keys and `OPENROUTER_API_KEY` from `services/api/.env` to Secret Manager.
+4. `PROJECT_ID=<id> ./infra/deploy.sh`: builds both images with Cloud Build and deploys web (public), api and worker (private), plus the Pub/Sub push subscription. The LLM is Gemini through OpenRouter by default (paid from the OpenRouter balance, so no Vertex AI spend); `LLM_PROVIDER=vertex` uses Vertex AI instead, and `LLM_ENABLED=false` deploys without it.
 5. Demo day: `./infra/demo-mode.sh on|off` and the [demo runbook](docs/demo-runbook.md). Afterwards: `./infra/teardown.sh`. Daily: [`infra/cost-check.md`](infra/cost-check.md).
 
 ## Team
