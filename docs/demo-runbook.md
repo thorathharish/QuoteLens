@@ -6,7 +6,7 @@ A 6-minute walkthrough of the full journey, with the checks to do beforehand and
 1. `PROJECT_ID=<id> ./infra/demo-mode.sh on`: keeps web and api warm (no cold starts). **Turn it off afterwards.**
 2. Open the web URL and choose **Open the demo project**. Wait for the analysis banner to finish, which takes a few seconds.
 3. Check that the Overview says **3 blockers**, with totals for 100, 1,000 and 5,000 boards.
-4. Copilot (if Gemini is configured, #8): ask *"Which parts block this quote and why?"*. Expect a cited answer within about 5 s.
+4. Copilot (needs the `openrouter-api-key` secret, or Vertex AI with `LLM_PROVIDER=vertex`): ask *"Which parts block this quote and why?"*. Expect a cited answer within about 5 s.
 5. Keep a second, untouched demo project open in another tab as a spare.
 6. Check spend in Billing → Reports (see `infra/cost-check.md`).
 
@@ -27,9 +27,9 @@ A 6-minute walkthrough of the full journey, with the checks to do beforehand and
 | Problem | Do this |
 |---|---|
 | The analysis banner never finishes | Wait 60 s (cold worker); if still stuck, open the spare project. Root fix: check Pub/Sub delivery (#6). |
-| The copilot returns *"needs Gemini"* or errors | Say the copilot needs Vertex AI. Show the evidence dialog and calculation steps instead, which carry the same information. |
+| The copilot says it *needs an LLM* or errors | Check the OpenRouter balance and the `openrouter-api-key` secret. Meanwhile show the evidence dialog and calculation steps, which carry the same information. |
 | A distributor is slow | Demo projects use the snapshot catalog and never call live APIs. |
-| Credit is running low | Set `LLM_ENABLED=false` on api and worker (`gcloud run services update … --update-env-vars LLM_ENABLED=false`). Everything except the copilot keeps working. |
+| OpenRouter or GCP credit is running low | Set `LLM_ENABLED=false` on api and worker (`gcloud run services update … --update-env-vars LLM_ENABLED=false`). Everything except the copilot keeps working. |
 | The page is slow on first load | Run `demo-mode.sh on`. Cloud Run was scaled to zero. |
 
 ## After the demo
