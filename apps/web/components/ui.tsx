@@ -3,7 +3,10 @@
 import clsx from "clsx";
 import { forwardRef, useEffect, useRef } from "react";
 
-/** One radius (6px) for controls; panels use 10px. Press feedback on every variant. */
+/**
+ * Raised controls from the template: primary is a metal key (light metal on dark, dark
+ * metal on light), secondary a raised chip. Uppercase tracked labels; press feedback.
+ */
 export function Button({
   variant = "secondary",
   className,
@@ -13,10 +16,10 @@ export function Button({
     <button
       {...props}
       className={clsx(
-        "inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-semibold transition-[background-color,color,transform] duration-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0",
-        variant === "primary" && "bg-mask text-silk hover:bg-mask-2",
-        variant === "secondary" && "bg-laminate-2 text-ink hover:bg-mask-tint hover:text-mask",
-        variant === "quiet" && "px-1.5 text-mask hover:bg-mask-tint",
+        "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold tracking-[0.12em] uppercase transition-[filter,color,background-color,transform] duration-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45 disabled:active:translate-y-0",
+        variant === "primary" && "metal hover:brightness-110",
+        variant === "secondary" && "chip text-ink hover:text-mask",
+        variant === "quiet" && "px-2 text-mask hover:bg-mask-tint",
         variant === "danger" && "px-2 text-blocker hover:bg-blocker-tint",
         className,
       )}
@@ -30,11 +33,11 @@ export const Field = forwardRef<
 >(function Field({ label, hint, className, ...props }, ref) {
   return (
     <label className={clsx("flex flex-col gap-1 text-sm", className)}>
-      <span className="font-semibold text-ink-2">{label}</span>
+      <span className="label">{label}</span>
       <input
         ref={ref}
         {...props}
-        className="rounded-md border border-rule-strong bg-silk px-3 py-2 text-base text-ink transition-colors placeholder:text-ink-3 hover:border-ink-3"
+        className="rounded-md border border-rule-strong bg-silk px-3 py-2 text-base text-ink transition-colors placeholder:text-ink-3 hover:border-ink-3 focus:border-mask"
       />
       {hint && <span className="text-xs text-ink-3">{hint}</span>}
     </label>
@@ -47,17 +50,17 @@ export function TextArea({
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }) {
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="font-semibold text-ink-2">{label}</span>
+      <span className="label">{label}</span>
       <textarea
         {...props}
-        className="min-h-20 rounded-md border border-rule-strong bg-silk px-3 py-2 text-base text-ink transition-colors placeholder:text-ink-3 hover:border-ink-3"
+        className="min-h-20 rounded-md border border-rule-strong bg-silk px-3 py-2 text-base text-ink transition-colors placeholder:text-ink-3 hover:border-ink-3 focus:border-mask"
       />
     </label>
   );
 }
 
 const SEVERITY_STYLE: Record<string, string> = {
-  BLOCKER: "bg-blocker text-silk",
+  BLOCKER: "bg-blocker text-on-fill",
   HIGH: "bg-high-tint text-high",
   MEDIUM: "bg-medium-tint text-medium",
   LOW: "bg-low-tint text-low",
@@ -67,7 +70,12 @@ const SEVERITY_STYLE: Record<string, string> = {
 export function SeverityTag({ severity }: { severity: string }) {
   const label = { BLOCKER: "Blocker", HIGH: "High", MEDIUM: "Medium", LOW: "Low" }[severity] ?? severity;
   return (
-    <span className={clsx("inline-flex rounded-sm px-1.5 py-0.5 text-xs font-semibold", SEVERITY_STYLE[severity])}>
+    <span
+      className={clsx(
+        "inline-flex rounded-sm px-1.5 py-0.5 text-[0.6875rem] leading-4 font-semibold tracking-[0.12em] uppercase",
+        SEVERITY_STYLE[severity],
+      )}
+    >
       {label}
     </span>
   );
@@ -77,7 +85,7 @@ export function Tag({ children, tone = "neutral" }: { children: React.ReactNode;
   return (
     <span
       className={clsx(
-        "inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-semibold",
+        "inline-flex items-center rounded-sm px-1.5 py-0.5 text-[0.6875rem] leading-4 font-semibold tracking-[0.12em] uppercase",
         tone === "neutral" && "bg-low-tint text-ink-2",
         tone === "mask" && "bg-mask-tint text-mask",
         tone === "gold" && "bg-gold-tint text-gold",
@@ -88,7 +96,7 @@ export function Tag({ children, tone = "neutral" }: { children: React.ReactNode;
   );
 }
 
-/** A silk surface on the laminate ground: the tone step separates it, no outline. */
+/** A framed console surface: hairline edge, tone gradient, label-style title over a rule. */
 export function Panel({
   title,
   action,
@@ -101,14 +109,14 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={clsx("min-w-0 rounded-[var(--radius-panel)] bg-silk", className)}>
+    <section className={clsx("surface min-w-0 rounded-[var(--radius-panel)]", className)}>
       {(title || action) && (
-        <header className="flex items-center justify-between gap-4 px-5 pt-4">
-          <h2 className="text-base font-semibold">{title}</h2>
+        <header className="flex min-h-12 items-center justify-between gap-4 border-b border-rule px-5 py-3">
+          <h2 className="label !text-ink-2">{title}</h2>
           {action}
         </header>
       )}
-      <div className={clsx("px-5 pb-5", title || action ? "pt-3" : "pt-5")}>{children}</div>
+      <div className="p-5">{children}</div>
     </section>
   );
 }
@@ -132,7 +140,7 @@ export function PageSkeleton({ rows = 6, label = "Loading" }: { rows?: number; l
   return (
     <div role="status" aria-label={label} className="flex flex-col gap-6">
       <Skeleton className="h-20 w-full" />
-      <div className="rounded-[var(--radius-panel)] bg-silk p-5">
+      <div className="surface rounded-[var(--radius-panel)] p-5">
         <Skeleton className="mb-5 h-5 w-48" />
         <div className="flex flex-col gap-3">
           {Array.from({ length: rows }, (_, i) => (
@@ -158,8 +166,8 @@ export function ErrorNote({ error }: { error: unknown }) {
 /** An empty state says what is missing and offers the next step. */
 export function Empty({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
-    <div className="rounded-[var(--radius-panel)] bg-laminate-2 px-6 py-10 sm:px-10">
-      <p className="text-xl font-semibold">{title}</p>
+    <div className="surface frame rounded-[var(--radius-panel)] px-6 py-12 sm:px-12">
+      <p className="text-2xl font-light tracking-[-0.03em]">{title}</p>
       {children && <div className="mt-2 max-w-prose text-ink-2">{children}</div>}
     </div>
   );
@@ -191,12 +199,12 @@ export function Dialog({
       ref={ref}
       onClose={onClose}
       className={clsx(
-        "m-auto w-[calc(100%-2rem)] rounded-[var(--radius-panel)] bg-silk p-0 text-ink shadow-[var(--shadow-overlay)]", // taste-skill-ignore: a dialog floats
+        "m-auto w-[calc(100%-2rem)] rounded-[var(--radius-panel)] border border-rule bg-silk p-0 text-ink shadow-[var(--shadow-overlay)]",
         wide ? "max-w-3xl" : "max-w-lg",
       )}
     >
-      <header className="flex items-center justify-between gap-4 px-6 pt-5 pb-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
+      <header className="flex items-center justify-between gap-4 border-b border-rule px-6 py-4">
+        <h2 className="text-lg font-medium">{title}</h2>
         <button
           onClick={onClose}
           className="flex h-9 w-9 items-center justify-center rounded-md text-xl leading-none text-ink-3 transition-colors hover:bg-laminate-2 hover:text-ink"
@@ -205,7 +213,7 @@ export function Dialog({
           ×
         </button>
       </header>
-      <div className="relative max-h-[75vh] overflow-y-auto px-6 pt-2 pb-6">{open && children}</div>
+      <div className="relative max-h-[75vh] overflow-y-auto px-6 py-5">{open && children}</div>
     </dialog>
   );
 }

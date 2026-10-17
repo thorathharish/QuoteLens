@@ -79,3 +79,6 @@ desktop.ini
 
 # taste-skill inspector output
 .taste-skill/
+
+# Local design reference (third-party template, not part of the app)
+sample.html

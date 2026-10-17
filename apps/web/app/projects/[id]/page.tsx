@@ -46,19 +46,23 @@ export default function OverviewPage() {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="flex flex-col gap-6">
         <section
-          className={clsx(
-            "flex flex-wrap items-center gap-x-6 gap-y-2 rounded-[var(--radius-panel)] px-6 py-5",
-            r.ready ? "bg-mask-tint" : "bg-blocker-tint",
-          )}
+          className="surface frame flex flex-wrap items-center gap-x-8 gap-y-3 rounded-[var(--radius-panel)] px-8 py-7"
         >
           <span
             aria-hidden
-            className={clsx("tabular text-6xl leading-none font-semibold tracking-tight", r.ready ? "text-mask" : "text-blocker")}
+            className={clsx(
+              "tabular text-7xl leading-none font-light tracking-[-0.06em]",
+              r.ready ? "text-mask" : "text-blocker",
+            )}
           >
             {blockers}
           </span>
           <div className="min-w-0 flex-1 basis-72">
-          <h2 className="text-xl font-semibold">
+          <p className={clsx("label flex items-center gap-2", r.ready ? "!text-mask" : "!text-blocker")}>
+            <span className="status-dot" aria-hidden />
+            {r.ready ? "Quote ready" : "Quote blocked"}
+          </p>
+          <h2 className="mt-1.5 text-2xl font-light tracking-[-0.03em]">
             {r.ready
               ? "Ready to quote"
               : `${blockers} blocker${blockers === 1 ? "" : "s"} stand between this BOM and a quote`}
@@ -141,8 +145,8 @@ export default function OverviewPage() {
         <Panel title="Open risks">
           <ul className="grid grid-cols-2 gap-2">
             {SEVERITIES.map((s) => (
-              <li key={s} className="flex flex-col gap-1.5 rounded-md bg-laminate px-3 py-2.5">
-                <span className="tabular text-3xl leading-none font-semibold">{r.unresolved_by_severity?.[s] ?? 0}</span>
+              <li key={s} className="chip flex flex-col gap-2 rounded-md px-3 py-3">
+                <span className="tabular text-4xl leading-none font-light tracking-[-0.05em]">{r.unresolved_by_severity?.[s] ?? 0}</span>
                 <span className="self-start">
                   <SeverityTag severity={s} />
                 </span>

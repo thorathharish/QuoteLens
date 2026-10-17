@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Atkinson_Hyperlegible_Mono, Atkinson_Hyperlegible_Next } from "next/font/google";
+import { Atkinson_Hyperlegible_Mono, Manrope } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { themeBootScript } from "@/lib/theme";
 import "./globals.css";
 
-const atkinson = Atkinson_Hyperlegible_Next({
-  variable: "--font-atkinson",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
 });
 
@@ -23,10 +24,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // The font variables sit on <html>: Tailwind resolves --font-sans on :root, so variables
-  // set lower (on <body>) leave it invalid and the page falls back to the browser serif.
+  // Font variables sit on <html>: Tailwind resolves --font-sans on :root, so variables set
+  // lower (on <body>) leave it invalid. The boot script sets data-theme on <html> before
+  // paint, hence suppressHydrationWarning.
   return (
-    <html lang="en" className={`${atkinson.variable} ${atkinsonMono.variable}`}>
+    <html lang="en" className={`${manrope.variable} ${atkinsonMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript() }} />
+      </head>
       <body className="antialiased">
         <a href="#main" className="skip-link">
           Skip to content

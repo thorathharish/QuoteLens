@@ -56,7 +56,7 @@ export default function BomPage() {
             aria-pressed={issue === code}
             className={clsx(
               "rounded-md px-3 py-1.5 text-sm transition-colors active:translate-y-px",
-              issue === code ? "bg-mask text-silk" : "bg-silk hover:bg-mask-tint hover:text-mask",
+              issue === code ? "metal" : "chip text-ink hover:text-mask",
             )}
           >
             {ISSUE_LABEL[code] ?? sentence(code)} <span className="tabular font-semibold">{count}</span>
@@ -72,7 +72,7 @@ export default function BomPage() {
         />
       </div>
 
-      <div className="relative overflow-x-auto rounded-[var(--radius-panel)] bg-silk p-2">
+      <div className="relative overflow-x-auto surface rounded-[var(--radius-panel)] p-2">
         <table className="data-table">
           <thead>
             <tr>

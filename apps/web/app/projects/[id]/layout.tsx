@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { CopilotDrawer } from "@/components/copilot";
 import { EvidenceProvider, ProvenanceLegend } from "@/components/fact";
 import { RoleSwitcher } from "@/components/role";
 import { Button, ErrorNote, PageSkeleton, Spinner } from "@/components/ui";
-import { DataModeTag, ProjectTabs, StatusTag, TraceStepper } from "@/components/workspace";
+import { ThemeSelect } from "@/components/theme";
+import { Brand, DataModeTag, ProjectTabs, StatusTag, TraceStepper } from "@/components/workspace";
 import { useInvalidateProject, useJob, useProject } from "@/lib/api/hooks";
 
 export default function ProjectLayout({ children }: { children: React.ReactNode }) {
@@ -18,49 +18,46 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
   return (
     <EvidenceProvider projectId={id}>
       <div className="flex min-h-dvh flex-col">
-        <header className="bg-silk">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-6 py-3.5">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
-              <Link href="/" className="rounded-md text-lg font-bold tracking-tight text-mask">
-                QuoteLens
-              </Link>
+        <header className="sticky top-0 z-30 border-b border-rule bg-[var(--header-bg)] backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-stretch justify-between gap-x-6 px-4 sm:px-6">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1 py-3">
+              <Brand />
               {project.data && (
-                <>
-                  <h1 className="truncate text-lg font-semibold">{project.data.name}</h1>
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                  <h1 className="truncate text-base font-medium">{project.data.name}</h1>
                   <span className="flex items-center gap-2">
                     <StatusTag status={project.data.status} />
                     <DataModeTag mode={project.data.data_mode} />
                   </span>
-                </>
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+              <ThemeSelect compact />
               <RoleSwitcher />
               <Button variant="primary" onClick={() => setCopilotOpen(true)} aria-expanded={copilotOpen}>
                 Ask copilot
               </Button>
             </div>
           </div>
-        </header>
-        <div className="bg-laminate-2">
-          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 pt-4">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 pt-1 sm:px-6">
             {project.data && <TraceStepper status={project.data.status} />}
             <ProjectTabs projectId={id} />
           </div>
-        </div>
+        </header>
 
         <Suspense>
           <JobBanner projectId={id} />
         </Suspense>
 
-        <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-6 py-8">
+        <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
           {project.isPending && <PageSkeleton />}
           <ErrorNote error={project.error} />
           {project.data && children}
         </main>
 
-        <footer className="bg-laminate-2">
-          <div className="mx-auto max-w-7xl px-6 py-4">
+        <footer className="border-t border-rule bg-[var(--header-bg)]">
+          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
             <ProvenanceLegend />
           </div>
         </footer>

@@ -113,14 +113,14 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
       aria-label="Copilot"
       inert={!open}
       className={clsx(
-        "fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col bg-silk",
+        "fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-rule bg-silk",
         // Visible at once when opening (so focus can land); hidden only after the slide-out.
         open
           ? "visible translate-x-0 shadow-[var(--shadow-overlay)] [transition:transform_200ms]" // taste-skill-ignore: open drawer floats
           : "invisible translate-x-full [transition:transform_200ms,visibility_0s_200ms]",
       )}
     >
-      <header className="flex items-start justify-between gap-4 bg-laminate-2 px-5 py-4">
+      <header className="flex items-start justify-between gap-4 border-b border-rule px-5 py-4">
         <div>
           <h2 className="text-lg font-semibold">Copilot</h2>
           <p className="text-sm text-ink-2">Answers only from this project&apos;s data, with sources.</p>
@@ -180,7 +180,7 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
                     <button
                       key={c.evidence_id}
                       onClick={() => evidence.open({ evidence_ids: [c.evidence_id] })}
-                      className="rounded-sm bg-mask-tint px-1.5 py-0.5 text-xs font-semibold text-mask transition-colors hover:bg-mask hover:text-silk"
+                      className="rounded-sm bg-mask-tint px-1.5 py-0.5 text-xs font-semibold text-mask transition-colors hover:bg-mask hover:text-on-fill"
                     >
                       {c.label}
                     </button>
@@ -193,7 +193,7 @@ export function CopilotDrawer({ projectId, open, onClose }: { projectId: string;
       </div>
 
       <form
-        className="flex gap-2 bg-laminate-2 px-5 py-4"
+        className="flex gap-2 border-t border-rule px-5 py-4"
         onSubmit={(e) => {
           e.preventDefault();
           submit(question);
