@@ -13,7 +13,7 @@ from typing import Any
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
-from app.domain.enums import RiskCategory, RiskStatus, Severity
+from app.domain.enums import IssueCode, RiskCategory, RiskStatus, Severity
 from app.domain.facts import Fact
 from app.domain.models import BomLine, Offer, Risk
 from app.impact.engine import LineOverride
@@ -88,7 +88,14 @@ class SearchArgs(BaseModel):
     query: str | None = Field(
         default=None, description="Text in MPN, manufacturer, description or refdes"
     )
-    issue: str | None = Field(default=None, description="Data issue code, e.g. MISSING_MPN")
+    # A plain string so an unknown code reaches the tool and gets a helpful error back.
+    issue: str | None = Field(
+        default=None,
+        description="Only lines with this data issue: " + ", ".join(c.value for c in IssueCode),
+    )
+    has_issues: bool = Field(
+        default=False, description="Only lines with any data issue to fix (DNP excluded)"
+    )
     only_risky: bool = Field(default=False, description="Only lines with unresolved risks")
 
 
@@ -183,8 +190,21 @@ def build_tools(
         )
 
     async def search_lines(
-        query: str | None = None, issue: str | None = None, only_risky: bool = False
+        query: str | None = None,
+        issue: str | None = None,
+        has_issues: bool = False,
+        only_risky: bool = False,
     ) -> str:
+        if issue and issue.upper() not in set(IssueCode):
+            # An unknown code must not look like "no lines have problems".
+            return run.record(
+                {
+                    "error": f"Unknown issue code '{issue}'",
+                    "valid_issue_codes": [c.value for c in IssueCode],
+                    "hint": "Use has_issues=true for every line with a data problem.",
+                    "evidence_ids": [],
+                }
+            )
         d = await data()
         risky = {r.line_id for r in await insights.risks(project_id) if r.status in UNRESOLVED}
         rows = [
@@ -200,12 +220,18 @@ def build_tools(
                 ).casefold()
             )
             and (not issue or any(i.code.value == issue.upper() for i in line.validation))
+            and (not has_issues or any(i.code is not IssueCode.DNP for i in line.validation))
             and (not only_risky or line.id in risky)
         ]
         return run.record(
             {
                 "count": len(rows),
                 "lines": [_line_brief(x, d.offers) for x in rows[:MAX_ROWS]],
+                "issue_details": {
+                    x.id: [f"{i.code.value}: {i.message}" for i in x.validation]
+                    for x in rows[:MAX_ROWS]
+                    if x.validation
+                },
                 "truncated": len(rows) > MAX_ROWS,
                 "evidence_ids": [e for x in rows[:MAX_ROWS] for e in x.qty_per.evidence_ids],
             }
@@ -431,7 +457,9 @@ def build_tools(
         tool(
             search_lines,
             "search_lines",
-            "Find BOM lines by text, data issue, or unresolved risk.",
+            "Find BOM lines by text (full or partial MPN, family such as STM32, manufacturer, "
+            "description or refdes), by data issue (has_issues=true for all data problems), "
+            "or by unresolved risk.",
             SearchArgs,
         ),
         tool(

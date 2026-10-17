@@ -82,6 +82,8 @@ async def main() -> int:
                 f"{'PASS' if ok else 'FAIL'}  tools={sorted(tools)} cites={cites} "
                 f"grounded={done.get('grounded')}  {case['question']}"
             )
+            if not ok:
+                print("      answer: " + " ".join(answer.split())[:600])
         print(f"\n{passed}/{len(cases)} passed (target ≥ 8)")
         return 0 if passed >= 8 else 1
 

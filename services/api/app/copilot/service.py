@@ -27,7 +27,22 @@ from app.domain.models import ChatMessage, ChatSession, Citation, ToolCall
 from app.infra.repositories import OrderBy, Repositories
 from app.risk.service import InsightService
 
-_CITATION = re.compile(r"\[E:([A-Za-z0-9_\-]+)\]")
+# One id per bracket, or several: [E:ev_a] and [E:ev_a, E:ev_b] (or [E:ev_a, ev_b]).
+_CITATION_GROUP = re.compile(r"\[E:([^\]]+)\]")
+_CITATION_ID = re.compile(r"(?:E:)?([A-Za-z0-9_\-]+)")
+
+
+def cited_ids(answer: str) -> list[str]:
+    """Evidence ids cited in an answer, in order of first mention."""
+    ids = (
+        match.group(1)
+        for group in _CITATION_GROUP.findall(answer)
+        for part in group.split(",")
+        if (match := _CITATION_ID.fullmatch(part.strip()))
+    )
+    return list(dict.fromkeys(ids))
+
+
 HISTORY_TURNS = 6
 TOKEN_CHUNK = 24
 LLM_UNAVAILABLE = (
@@ -131,7 +146,7 @@ class CopilotService:
         return content.strip() if isinstance(content, str) else str(content)
 
     async def _citations(self, project_id: str, answer: str, run: ToolRun) -> list[Citation]:
-        cited = [ev for ev in dict.fromkeys(_CITATION.findall(answer)) if ev in run.evidence_ids]
+        cited = [ev for ev in cited_ids(answer) if ev in run.evidence_ids]
         citations: list[Citation] = []
         for ev_id in cited:
             evidence = await self.repos.evidence(project_id).find(ev_id)
