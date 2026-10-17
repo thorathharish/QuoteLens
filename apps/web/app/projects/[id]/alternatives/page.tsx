@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { FactValue, useEvidence } from "@/components/fact";
-import { Button, Dialog, Empty, ErrorNote, Spinner, Tag, TextArea } from "@/components/ui";
+import { Button, Dialog, Empty, ErrorNote, PageSkeleton, Tag, TextArea } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api/client";
 import { useAlternatives, useInvalidateProject, useLines, useProject } from "@/lib/api/hooks";
 import { quantity, sentence } from "@/lib/format";
@@ -34,7 +34,7 @@ function AlternativesView() {
   const project = useProject(id);
   const [deciding, setDeciding] = useState<{ alt: Alternative; approve: boolean } | null>(null);
 
-  if (alternatives.isPending) return <Spinner />;
+  if (alternatives.isPending) return <PageSkeleton />;
   if (alternatives.error) return <ErrorNote error={alternatives.error} />;
   const byLine = new Map<string, Alternative[]>();
   for (const alt of alternatives.data.items) byLine.set(alt.line_id, [...(byLine.get(alt.line_id) ?? []), alt]);
@@ -44,7 +44,7 @@ function AlternativesView() {
   if (order.length === 0) {
     return (
       <Empty title="No alternates investigated yet">
-        Open a line on the BOM or Risks tab and choose <span className="font-bold">Find alternates</span>. Nothing is ever
+        Open a line on the BOM or Risks tab and choose <span className="font-semibold">Find alternates</span>. Nothing is ever
         swapped until someone approves it.
       </Empty>
     );
@@ -56,7 +56,7 @@ function AlternativesView() {
         const line = lineInfo.get(lineId);
         return (
           <section key={lineId} className={clsx(lineId === focus && "rounded-md ring-2 ring-mask/40")}>
-            <h2 className="mb-3 text-lg font-bold">
+            <h2 className="mb-3 text-lg font-semibold">
               Alternates for <span className="code">{line?.substituted_from ?? line?.mpn ?? lineId}</span>
               {line?.substituted_from && (
                 <span className="ml-3 text-sm font-normal text-mask">
@@ -95,10 +95,10 @@ function AlternativeCard({
   const fit = FIT[alt.fit_class] ?? FIT.NOT_SUITABLE!;
   const summary = alt.offers_summary as Record<string, string | number | null>;
   return (
-    <article className="rounded-md border border-rule bg-silk">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-rule px-4 py-2.5">
+    <article className="rounded-[var(--radius-panel)] bg-silk">
+      <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
         <div>
-          <span className="code font-bold">{alt.candidate_mpn}</span>
+          <span className="code font-semibold">{alt.candidate_mpn}</span>
           <span className="ml-2 text-sm text-ink-2">{alt.manufacturer}</span>
         </div>
         <span className="flex items-center gap-2" title={fit.explain}>
@@ -128,7 +128,7 @@ function AlternativeCard({
                 <td className="tabular">{c.candidate ?? "—"}</td>
                 <td
                   className={clsx(
-                    "font-bold",
+                    "font-semibold",
                     c.result === "MATCH" && "text-mask",
                     c.result === "WITHIN_TOLERANCE" && "text-mask",
                     c.result === "MISMATCH" && "text-blocker",
@@ -153,7 +153,7 @@ function AlternativeCard({
             <FactValue fact={alt.delta_lead_days} kind="qty" /> days
           </dd>
         </dl>
-        <div className="flex flex-wrap items-center gap-2 border-t border-rule pt-3">
+        <div className="flex flex-wrap items-center gap-2 pt-3">
           <Button variant="quiet" onClick={() => evidence.open({ evidence_ids: alt.evidence_ids ?? [] })}>
             Show evidence
           </Button>

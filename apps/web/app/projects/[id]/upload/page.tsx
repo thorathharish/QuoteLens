@@ -87,11 +87,11 @@ export default function UploadPage() {
       <Panel title="Upload the customer BOM">
         <label
           className={clsx(
-            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-6 py-10 text-center",
-            upload.isPending ? "border-mask bg-mask-tint" : "border-rule-strong hover:border-mask",
+            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md px-6 py-12 text-center transition-colors focus-within:ring-2 focus-within:ring-mask",
+            upload.isPending ? "bg-mask-tint" : "bg-laminate hover:bg-mask-tint",
           )}
         >
-          <span className="font-bold">{upload.isPending ? "Reading the file…" : "Choose an .xlsx, .csv or .tsv file"}</span>
+          <span className="font-semibold">{upload.isPending ? "Reading the file…" : "Choose an .xlsx, .csv or .tsv file"}</span>
           <span className="text-sm text-ink-2">Up to 5 MB. Title rows above the header are fine.</span>
           <input
             type="file"
@@ -118,11 +118,11 @@ export default function UploadPage() {
           }
         >
           {preview.warnings.map((w) => (
-            <p key={w} className="mb-3 rounded border border-medium/40 bg-medium-tint px-3 py-2 text-sm text-medium">
+            <p key={w} className="mb-3 rounded-md bg-medium-tint px-3 py-2 text-sm text-medium">
               {w}
             </p>
           ))}
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="data-table">
               <thead>
                 <tr>
@@ -139,7 +139,7 @@ export default function UploadPage() {
                   const clash = choice !== null && used.get(choice) !== m.column_index;
                   return (
                     <tr key={m.column_index}>
-                      <td className="font-bold">{m.header || `Column ${m.column_index + 1}`}</td>
+                      <td className="font-semibold">{m.header || `Column ${m.column_index + 1}`}</td>
                       <td>
                         <select
                           aria-label={`Field for ${m.header}`}
@@ -148,7 +148,7 @@ export default function UploadPage() {
                             setChoices({ ...choices, [m.column_index]: (e.target.value || null) as FieldName | null })
                           }
                           className={clsx(
-                            "rounded border bg-silk px-2 py-1 text-sm",
+                            "rounded-md border bg-silk px-2 py-1 text-sm",
                             clash ? "border-blocker" : "border-rule-strong",
                           )}
                         >

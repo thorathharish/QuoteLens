@@ -33,8 +33,8 @@ function stageIndex(status: Project["status"]): number {
 }
 
 /**
- * The workflow drawn as a circuit trace: pads for stages, copper between them. The current
- * stage pad is filled; completed segments are solid, upcoming ones dashed.
+ * The workflow drawn as a circuit trace: pads for stages, copper between them. Done pads and
+ * traces are solid copper green, the current pad is gold, upcoming ones are bare laminate.
  */
 export function TraceStepper({ status }: { status: Project["status"] }) {
   const current = stageIndex(status);
@@ -48,21 +48,27 @@ export function TraceStepper({ status }: { status: Project["status"] }) {
             <span className="flex items-center gap-2">
               <span
                 className={clsx(
-                  "h-3.5 w-3.5 rounded-sm border-2",
-                  done && "border-mask bg-mask",
-                  active && "border-gold bg-gold",
-                  !done && !active && "border-rule-strong bg-silk",
+                  "h-3.5 w-3.5 rounded-sm",
+                  done && "bg-mask",
+                  active && "bg-gold-pad",
+                  !done && !active && "bg-rule-strong",
                 )}
                 aria-hidden
               />
-              <span className={clsx("text-sm whitespace-nowrap", active ? "font-bold text-ink" : "text-ink-2")}>
+              {/* On a phone only the current stage is named; the pads still show progress. */}
+              <span
+                className={clsx(
+                  "text-sm whitespace-nowrap",
+                  active ? "font-semibold text-ink" : "sr-only text-ink-2 sm:not-sr-only",
+                )}
+              >
                 {stage.label}
               </span>
             </span>
             {i < STAGES.length - 1 && (
               <span
                 aria-hidden
-                className={clsx("mx-3 h-0 flex-1 border-t-2", done ? "border-mask" : "border-dashed border-rule-strong")}
+                className={clsx("mx-2 h-0.5 min-w-3 flex-1 rounded-full sm:mx-3", done ? "bg-mask" : "bg-rule")}
               />
             )}
           </li>
@@ -86,7 +92,7 @@ export function ProjectTabs({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const base = `/projects/${projectId}`;
   return (
-    <nav className="-mb-px flex gap-1 overflow-x-auto" aria-label="Project sections">
+    <nav className="relative -mx-1 flex gap-1 overflow-x-auto" aria-label="Project sections">
       {TABS.map((tab) => {
         const href = base + tab.href;
         const active = tab.href === "" ? pathname === base : pathname.startsWith(href);
@@ -94,9 +100,10 @@ export function ProjectTabs({ projectId }: { projectId: string }) {
           <Link
             key={tab.label}
             href={href}
+            aria-current={active ? "page" : undefined}
             className={clsx(
-              "border-b-2 px-3 py-2 text-sm whitespace-nowrap",
-              active ? "border-mask font-bold text-ink" : "border-transparent text-ink-2 hover:text-ink",
+              "rounded-t-md px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors",
+              active ? "bg-laminate font-semibold text-ink" : "text-ink-2 hover:bg-laminate/60 hover:text-ink",
             )}
           >
             {tab.label}
@@ -114,7 +121,7 @@ export function StatusTag({ status }: { status: Project["status"] }) {
       : status === "FAILED"
         ? "bg-blocker-tint text-blocker"
         : "bg-low-tint text-ink-2";
-  return <span className={clsx("rounded-sm px-2 py-0.5 text-xs font-bold", tone)}>{sentence(status ?? "DRAFT")}</span>;
+  return <span className={clsx("rounded-sm px-1.5 py-0.5 text-xs font-semibold", tone)}>{sentence(status ?? "DRAFT")}</span>;
 }
 
 export function DataModeTag({ mode }: { mode: Project["data_mode"] }) {
@@ -122,7 +129,10 @@ export function DataModeTag({ mode }: { mode: Project["data_mode"] }) {
     mode === "demo_snapshot" ? "Demo snapshot data" : mode === "live_first" ? "Live distributor data" : "Cached distributor data";
   return (
     <span
-      className="rounded-sm border border-dashed border-medium/60 px-2 py-0.5 text-xs text-medium"
+      className={clsx(
+        "rounded-sm px-1.5 py-0.5 text-xs font-semibold",
+        mode === "demo_snapshot" ? "bg-gold-tint text-gold" : "bg-mask-tint text-mask",
+      )}
       title={mode === "demo_snapshot" ? "Prices, stock and lifecycle are synthetic demo values" : undefined}
     >
       {label}

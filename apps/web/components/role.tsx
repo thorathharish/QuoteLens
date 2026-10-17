@@ -37,7 +37,7 @@ export function RoleSwitcher() {
       <select
         value={role}
         onChange={(e) => change(e.target.value as Role)}
-        className="rounded border border-rule-strong bg-silk px-2 py-1 text-sm text-ink"
+        className="rounded-md border border-rule-strong bg-silk px-2 py-1 text-sm text-ink"
       >
         {ROLES.map((r) => (
           <option key={r.value} value={r.value}>

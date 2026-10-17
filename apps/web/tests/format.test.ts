@@ -7,6 +7,8 @@ describe("format", () => {
   it("formats API decimal strings without inventing values", () => {
     expect(money("4389.48", "USD")).toBe("$4,389.48");
     expect(money("0.7175", "USD")).toBe("$0.7175");
+    expect(money("524.8869", "USD")).toBe("$524.89");
+    expect(money("0.00469", "USD")).toBe("$0.0047");
     expect(money(null)).toBe("—");
     expect(quantity("1000")).toBe("1,000");
     expect(percent("0.897", 1)).toBe("89.7%");

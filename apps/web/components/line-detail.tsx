@@ -8,7 +8,7 @@ import { api, unwrap, type Schemas } from "@/lib/api/client";
 import { useInvalidateProject, useLine } from "@/lib/api/hooks";
 import { dateTime, money, quantity, sentence } from "@/lib/format";
 import { FactValue, ProvenanceMark, useEvidence } from "./fact";
-import { Button, Dialog, ErrorNote, Field, SeverityTag, Spinner, Tag } from "./ui";
+import { Button, Dialog, ErrorNote, Field, PageSkeleton, SeverityTag, Tag } from "./ui";
 
 type Offer = Schemas["Offer"];
 
@@ -23,7 +23,7 @@ export function LineDialog({ projectId, lineId, onClose }: { projectId: string; 
 function LineDetailBody({ projectId, lineId }: { projectId: string; lineId: string }) {
   const detail = useLine(projectId, lineId);
   const evidence = useEvidence();
-  if (detail.isPending) return <Spinner />;
+  if (detail.isPending) return <PageSkeleton />;
   if (detail.error) return <ErrorNote error={detail.error} />;
   const { line, component, offers, recommendation, risks, alternatives } = detail.data;
   const notFound = line.match?.status === "NOT_FOUND";
@@ -32,7 +32,7 @@ function LineDetailBody({ projectId, lineId }: { projectId: string; lineId: stri
     <div className="flex flex-col gap-6">
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="code text-lg font-bold">{line.mpn ?? "No part number"}</p>
+          <p className="code text-lg font-semibold">{line.mpn ?? "No part number"}</p>
           <p className="text-ink-2">
             {line.manufacturer ?? "Manufacturer not given"}
             {line.description && <span className="text-ink-3">, {line.description}</span>}
@@ -69,7 +69,7 @@ function LineDetailBody({ projectId, lineId }: { projectId: string; lineId: stri
       {line.validation && line.validation.length > 0 && (
         <ul className="flex flex-col gap-1">
           {line.validation.map((issue, i) => (
-            <li key={i} className="rounded border border-medium/30 bg-medium-tint px-3 py-1.5 text-sm text-medium">
+            <li key={i} className="rounded-md bg-medium-tint px-3 py-1.5 text-sm text-medium">
               {issue.message}
             </li>
           ))}
@@ -82,7 +82,7 @@ function LineDetailBody({ projectId, lineId }: { projectId: string; lineId: stri
 
       {recommendation && (
         <section>
-          <h3 className="mb-2 font-bold">Recommended source</h3>
+          <h3 className="mb-2 font-semibold">Recommended source</h3>
           <ul className="space-y-1 text-sm">
             {recommendation.reasons.map((reason) => (
               <li key={reason} className="flex gap-2">
@@ -106,23 +106,23 @@ function LineDetailBody({ projectId, lineId }: { projectId: string; lineId: stri
 
       {risks.length > 0 && (
         <section>
-          <h3 className="mb-2 font-bold">Risks on this line</h3>
+          <h3 className="mb-2 font-semibold">Risks on this line</h3>
           <ul className="space-y-2">
             {risks.map((risk) => (
               <li key={risk.id} className="text-sm">
                 <span className="mr-2">
                   <SeverityTag severity={risk.severity} />
                 </span>
-                <span className="font-bold">{risk.title}.</span> {risk.why}
+                <span className="font-semibold">{risk.title}.</span> {risk.why}
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      <section className="flex flex-wrap items-center gap-3 border-t border-rule pt-4">
+      <section className="flex flex-wrap items-center gap-3 pt-4">
         {alternatives.length > 0 ? (
-          <Link href={`/projects/${projectId}/alternatives?line=${line.id}`} className="text-sm font-bold text-mask hover:underline">
+          <Link href={`/projects/${projectId}/alternatives?line=${line.id}`} className="text-sm font-semibold text-mask hover:underline">
             {alternatives.length} alternate(s) investigated
           </Link>
         ) : (
@@ -168,8 +168,8 @@ function OffersTable({
 
   return (
     <section>
-      <h3 className="mb-2 font-bold">Distributor offers</h3>
-      <div className="overflow-x-auto rounded border border-rule">
+      <h3 className="mb-2 font-semibold">Distributor offers</h3>
+      <div className="relative overflow-x-auto rounded-md">
         <table className="data-table">
           <thead>
             <tr>
@@ -186,7 +186,7 @@ function OffersTable({
             {offers.map((offer) => (
               <tr key={offer.id} className={clsx(offer.id === selected && "bg-mask-tint")}>
                 <td>
-                  <span className="font-bold">{offer.distributor}</span>
+                  <span className="font-semibold">{offer.distributor}</span>
                   {!offer.authorized && <span className="ml-2 text-xs text-blocker">unauthorized</span>}
                   {offer.id === recommended && (
                     <span className="ml-2">
@@ -211,7 +211,7 @@ function OffersTable({
                 </td>
                 <td>
                   {offer.id === selected ? (
-                    <span className="text-xs font-bold text-mask">Selected</span>
+                    <span className="text-xs font-semibold text-mask">Selected</span>
                   ) : (
                     offer.authorized && (
                       <Button variant="quiet" onClick={() => setChoosing(offer)}>
@@ -227,7 +227,7 @@ function OffersTable({
       </div>
       {choosing && (
         <form
-          className="mt-3 flex flex-wrap items-end gap-3 rounded border border-rule bg-laminate p-3"
+          className="mt-3 flex flex-wrap items-end gap-3 rounded-md bg-laminate p-3"
           onSubmit={(e) => {
             e.preventDefault();
             select.mutate(choosing);
@@ -269,8 +269,8 @@ function MpnFix({ projectId, lineId, candidates }: { projectId: string; lineId: 
     onSuccess: () => invalidate(),
   });
   return (
-    <section className="rounded border border-high/40 bg-high-tint p-3">
-      <h3 className="font-bold text-high">This part number was not found</h3>
+    <section className="rounded-md bg-high-tint p-3">
+      <h3 className="font-semibold text-high">This part number was not found</h3>
       {candidates.length > 0 && (
         <p className="mt-1 text-sm">
           Closest known: {candidates.map((c) => <span key={c} className="code mr-2">{c}</span>)}
@@ -354,7 +354,7 @@ function EditLine({ projectId, line }: { projectId: string; line: Schemas["BomLi
   if (!open) return <Button onClick={() => setOpen(true)}>Correct this line</Button>;
   return (
     <form
-      className="flex w-full flex-wrap items-end gap-3 rounded border border-rule bg-laminate p-3"
+      className="flex w-full flex-wrap items-end gap-3 rounded-md bg-laminate p-3"
       onSubmit={(e) => {
         e.preventDefault();
         save.mutate();

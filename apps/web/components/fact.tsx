@@ -16,7 +16,7 @@ type Fact = { value?: unknown; unit?: string | null; provenance: Provenance; evi
  */
 const MARKS: Record<Provenance, { glyph: string; label: string; className: string; explain: string }> = {
   ACTUAL: { glyph: "■", label: "Actual", className: "text-ink", explain: "Taken directly from a source" },
-  CALCULATED: { glyph: "ƒ", label: "Calculated", className: "text-mask italic font-bold", explain: "Computed from other values" },
+  CALCULATED: { glyph: "ƒ", label: "Calculated", className: "text-mask italic font-semibold", explain: "Computed from other values" },
   ASSUMED: {
     glyph: "◌",
     label: "Assumed",
@@ -162,9 +162,9 @@ export function EvidenceRecord({ projectId, id }: { projectId: string; id: strin
   const ev = query.data;
   const excerpt = Object.entries(ev.payload_excerpt ?? {});
   return (
-    <article className="rounded border border-rule">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-rule bg-laminate px-3 py-2">
-        <span className="font-bold">{ev.source_name}</span>
+    <article className="rounded-md bg-laminate">
+      <header className="flex flex-wrap items-center justify-between gap-2 rounded-t-md bg-laminate-2 px-3 py-2">
+        <span className="font-semibold">{ev.source_name}</span>
         <span className="flex flex-wrap gap-x-3 text-xs text-ink-2">
           <span>{sentence(ev.kind)}</span>
           {ev.mode && <span>{ev.mode === "DEMO_SNAPSHOT" ? "Demo snapshot (synthetic data)" : sentence(ev.mode)}</span>}
