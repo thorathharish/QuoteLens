@@ -2,7 +2,6 @@
 
 import clsx from "clsx";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import type { Schemas } from "@/lib/api/client";
 import { sentence } from "@/lib/format";
 
@@ -23,7 +22,7 @@ export function Brand() {
   );
 }
 
-const STAGES = [
+export const STAGES = [
   { key: "upload", label: "Upload" },
   { key: "map", label: "Map columns" },
   { key: "analyze", label: "Analyze" },
@@ -31,7 +30,7 @@ const STAGES = [
   { key: "quote", label: "Quote" },
 ] as const;
 
-function stageIndex(status: Project["status"]): number {
+export function stageIndex(status: Project["status"]): number {
   switch (status) {
     case "DRAFT":
       return 0;
@@ -45,90 +44,6 @@ function stageIndex(status: Project["status"]): number {
     default:
       return 4;
   }
-}
-
-/**
- * The workflow drawn as a circuit trace: pads for stages, copper between them. Done pads and
- * traces are solid copper green, the current pad is gold, upcoming ones are bare laminate.
- */
-export function TraceStepper({ status }: { status: Project["status"] }) {
-  const current = stageIndex(status);
-  return (
-    <ol className="flex items-center" aria-label="Workflow progress">
-      {STAGES.map((stage, i) => {
-        const done = i < current;
-        const active = i === current;
-        return (
-          <li key={stage.key} className="flex flex-1 items-center last:flex-none" aria-current={active ? "step" : undefined}>
-            <span className="flex items-center gap-2">
-              <span
-                className={clsx(
-                  "h-3.5 w-3.5 rounded-sm",
-                  done && "bg-mask",
-                  active && "bg-gold-pad",
-                  !done && !active && "bg-rule-strong",
-                )}
-                aria-hidden
-              />
-              {/* On a phone only the current stage is named; the pads still show progress. */}
-              <span
-                className={clsx(
-                  "text-[0.6875rem] font-medium tracking-[0.14em] whitespace-nowrap uppercase",
-                  active ? "text-ink" : "sr-only text-ink-3 sm:not-sr-only",
-                )}
-              >
-                {stage.label}
-              </span>
-            </span>
-            {i < STAGES.length - 1 && (
-              <span
-                aria-hidden
-                className={clsx("mx-2 h-0.5 min-w-3 flex-1 rounded-full sm:mx-3", done ? "bg-mask" : "bg-rule")}
-              />
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-const TABS = [
-  { href: "", label: "Overview" },
-  { href: "/bom", label: "BOM" },
-  { href: "/risks", label: "Risks" },
-  { href: "/impact", label: "Cost impact" },
-  { href: "/alternatives", label: "Alternatives" },
-  { href: "/quote", label: "Quote" },
-  { href: "/activity", label: "Activity" },
-];
-
-export function ProjectTabs({ projectId }: { projectId: string }) {
-  const pathname = usePathname();
-  const base = `/projects/${projectId}`;
-  return (
-    <nav className="relative -mx-4 flex overflow-x-auto border-t border-rule sm:mx-0 sm:border-x" aria-label="Project sections">
-      {TABS.map((tab) => {
-        const href = base + tab.href;
-        const active = tab.href === "" ? pathname === base : pathname.startsWith(href);
-        return (
-          <Link
-            key={tab.label}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={clsx(
-              "relative border-r border-rule px-4 py-3 text-xs font-medium tracking-[0.14em] whitespace-nowrap uppercase transition-colors last:border-r-0",
-              active
-                ? "bg-mask-tint text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-mask"
-                : "text-ink-3 hover:bg-mask-tint/50 hover:text-ink",
-            )}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
 }
 
 export function StatusTag({ status }: { status: Project["status"] }) {

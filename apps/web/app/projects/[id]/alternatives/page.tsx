@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { AskButton } from "@/components/copilot";
 import { FactValue, useEvidence } from "@/components/fact";
 import { Button, Dialog, Empty, ErrorNote, PageSkeleton, Tag, TextArea } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api/client";
@@ -102,6 +103,17 @@ function AlternativeCard({
           <span className="ml-2 text-sm text-ink-2">{alt.manufacturer}</span>
         </div>
         <span className="flex items-center gap-2" title={fit.explain}>
+          <AskButton
+            context={{
+              key: alt.id,
+              label: alt.candidate_mpn,
+              detail: `alternate, ${fit.label.toLowerCase()}`,
+              suggestions: [
+                `What changes if I approve ${alt.candidate_mpn}?`,
+                `How does ${alt.candidate_mpn} compare on cost and lead time?`,
+              ],
+            }}
+          />
           <Tag tone={fit.tone}>{fit.label}</Tag>
           {alt.status !== "PROPOSED" && <Tag tone={alt.status === "APPROVED" ? "mask" : "neutral"}>{sentence(alt.status ?? "")}</Tag>}
         </span>

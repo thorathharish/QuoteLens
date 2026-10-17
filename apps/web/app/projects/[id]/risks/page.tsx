@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import clsx from "clsx";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { AskButton } from "@/components/copilot";
 import { FactValue, useEvidence } from "@/components/fact";
 import { LineDialog } from "@/components/line-detail";
 import { Button, Dialog, Empty, ErrorNote, PageSkeleton, SeverityTag, Tag, TextArea } from "@/components/ui";
@@ -133,8 +134,20 @@ function RiskItem({
         <Button variant="quiet" className="-ml-1.5" onClick={() => evidence.open({ evidence_ids: risk.evidence_ids })}>
           Show evidence ({risk.evidence_ids.length})
         </Button>
+        <span className="ml-auto" />
+        <AskButton
+          context={{
+            key: risk.id,
+            label: part ?? risk.title,
+            detail: part ? risk.title.toLowerCase() : sentence(risk.severity ?? "risk"),
+            suggestions: [
+              "How can I clear this risk?",
+              part ? `Is there a replacement for ${part}?` : "Which lines does this affect?",
+            ],
+          }}
+        />
         {!closed && (
-          <span className="ml-auto flex flex-wrap items-center gap-1">
+          <span className="flex flex-wrap items-center gap-1">
             {risk.status === "OPEN" && (
               <Button variant="quiet" onClick={() => onDecide("ACKNOWLEDGED")}>
                 Acknowledge

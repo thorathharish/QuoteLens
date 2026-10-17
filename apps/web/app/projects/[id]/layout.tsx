@@ -1,26 +1,28 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
-import { CopilotDrawer } from "@/components/copilot";
+import { Suspense, useEffect } from "react";
+import { CopilotPane, CopilotProvider } from "@/components/copilot";
 import { EvidenceProvider, ProvenanceLegend } from "@/components/fact";
 import { RoleSwitcher } from "@/components/role";
-import { Button, ErrorNote, PageSkeleton, Spinner } from "@/components/ui";
+import { ErrorNote, PageSkeleton, Spinner } from "@/components/ui";
 import { ThemeSelect } from "@/components/theme";
-import { Brand, DataModeTag, ProjectTabs, StatusTag, TraceStepper } from "@/components/workspace";
+import { MobileNav, SideNav } from "@/components/side-nav";
+import { Brand, DataModeTag, StatusTag } from "@/components/workspace";
 import { useInvalidateProject, useJob, useProject } from "@/lib/api/hooks";
 
 export default function ProjectLayout({ children }: { children: React.ReactNode }) {
   const { id } = useParams<{ id: string }>();
   const project = useProject(id);
-  const [copilotOpen, setCopilotOpen] = useState(false);
 
   return (
     <EvidenceProvider projectId={id}>
+    <CopilotProvider>
       <div className="flex min-h-dvh flex-col">
         <header className="sticky top-0 z-30 border-b border-rule bg-[var(--header-bg)] backdrop-blur-xl">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-stretch justify-between gap-x-6 px-4 sm:px-6">
+          <div className="flex flex-wrap items-stretch justify-between gap-x-6 px-4 sm:px-6 lg:pl-5">
             <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1 py-3">
+              {project.data && <MobileNav projectId={id} status={project.data.status} />}
               <Brand />
               {project.data && (
                 <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
@@ -35,14 +37,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
               <ThemeSelect compact />
               <RoleSwitcher />
-              <Button variant="primary" onClick={() => setCopilotOpen(true)} aria-expanded={copilotOpen}>
-                Ask copilot
-              </Button>
             </div>
-          </div>
-          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 pt-1 sm:px-6">
-            {project.data && <TraceStepper status={project.data.status} />}
-            <ProjectTabs projectId={id} />
           </div>
         </header>
 
@@ -50,19 +45,23 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
           <JobBanner projectId={id} />
         </Suspense>
 
-        <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
-          {project.isPending && <PageSkeleton />}
-          <ErrorNote error={project.error} />
-          {project.data && children}
-        </main>
+        <div className="flex flex-1">
+          {project.data && <SideNav projectId={id} status={project.data.status} />}
+          <main id="main" className="mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-8">
+            {project.isPending && <PageSkeleton />}
+            <ErrorNote error={project.error} />
+            {project.data && children}
+          </main>
+          {project.data && <CopilotPane projectId={id} />}
+        </div>
 
         <footer className="border-t border-rule bg-[var(--header-bg)]">
-          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+          <div className="px-4 py-4 sm:px-6 lg:pl-24">
             <ProvenanceLegend />
           </div>
         </footer>
       </div>
-      <CopilotDrawer projectId={id} open={copilotOpen} onClose={() => setCopilotOpen(false)} />
+    </CopilotProvider>
     </EvidenceProvider>
   );
 }
