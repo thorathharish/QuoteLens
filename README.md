@@ -71,6 +71,7 @@ Everything is in [`docs/`](docs/README.md):
 | [ADRs](docs/adr/) | Architecture decision records |
 | [Implementation Plan](docs/implementation-plan.md) | Phases 0–9, milestones, team tracks, cut list, verification |
 | [Demo runbook](docs/demo-runbook.md) | 6-minute walkthrough, pre-demo checklist, fallbacks |
+| [Local testing](docs/local-testing.md) | Run locally against the real distributor APIs and an LLM via OpenRouter |
 
 ## Repository layout (planned)
 ```
@@ -94,6 +95,8 @@ uv run pytest
 # Frontend
 cd apps/web && pnpm install && pnpm dev                    # http://localhost:3000
 ```
+
+**Test locally with the real APIs** (DigiKey, Mouser, element14, and Gemini through OpenRouter): see [docs/local-testing.md](docs/local-testing.md).
 
 **Deploy to GCP (free credits)**, from the repo root in Git Bash, in this order:
 1. `PROJECT_ID=<id> BILLING_ACCOUNT=<id> BUDGET_CURRENCY=<USD|INR> ./infra/bootstrap.sh` (once): enables the APIs and creates service accounts, Firestore, the bucket, BigQuery, Pub/Sub, Artifact Registry and budget alerts.

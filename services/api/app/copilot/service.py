@@ -30,6 +30,10 @@ from app.risk.service import InsightService
 _CITATION = re.compile(r"\[E:([A-Za-z0-9_\-]+)\]")
 HISTORY_TURNS = 6
 TOKEN_CHUNK = 24
+LLM_UNAVAILABLE = (
+    "The copilot needs an LLM: Gemini on Vertex AI (GCP_PROJECT) or OpenRouter "
+    "(LLM_PROVIDER=openrouter and OPENROUTER_API_KEY), with LLM_ENABLED=true."
+)
 
 
 @dataclass
@@ -57,9 +61,7 @@ class CopilotService:
         self, project_id: str, session_id: str, question: str
     ) -> AsyncIterator[tuple[str, dict[str, Any]]]:
         if self.model is None:
-            raise LlmUnavailableError(
-                "The copilot needs Gemini on Vertex AI. Set GCP_PROJECT and LLM_ENABLED=true."
-            )
+            raise LlmUnavailableError(LLM_UNAVAILABLE)
         session = await self.repos.chat_sessions(project_id).get(session_id)
         store = self.repos.chat_messages(project_id, session_id)
         history = await self._history(project_id, session_id)

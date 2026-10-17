@@ -1,8 +1,9 @@
-"""Run the copilot evaluation set against real Gemini (needs GCP_PROJECT + LLM_ENABLED).
+"""Run the copilot evaluation set against the real LLM: Gemini on Vertex AI (GCP_PROJECT) or
+OpenRouter (LLM_PROVIDER=openrouter + OPENROUTER_API_KEY), with LLM_ENABLED=true.
 
     uv run python scripts/run_copilot_eval.py            # hero BOM, prints a pass/fail table
 
-Uses in-memory storage and the seed catalog; only the LLM calls are real (Vertex AI credit).
+Uses in-memory storage and the seed catalog; only the LLM calls are real.
 """
 
 import asyncio
@@ -28,7 +29,9 @@ async def main() -> int:
     settings = get_settings()
     container = build_container(settings, store=InMemoryDocumentStore())
     if container.copilot.model is None:
-        print("LLM not configured: set GCP_PROJECT and LLM_ENABLED=true in .env")
+        print(
+            "LLM not configured: set LLM_PROVIDER=openrouter + OPENROUTER_API_KEY (or GCP_PROJECT)"
+        )
         return 2
     cases: list[dict[str, Any]] = yaml.safe_load(
         (ROOT / "tests/evals/copilot_questions.yaml").read_text()

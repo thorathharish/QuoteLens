@@ -33,6 +33,11 @@ class JobBackend(StrEnum):
     PUBSUB = "pubsub"
 
 
+class LlmProvider(StrEnum):
+    VERTEX = "vertex"  # Gemini on Vertex AI (deployed; covered by the GCP free-trial credit)
+    OPENROUTER = "openrouter"  # any OpenRouter model (local testing without GCP)
+
+
 class StorageBackend(StrEnum):
     MEMORY = "memory"
     FIRESTORE = "firestore"
@@ -75,10 +80,16 @@ class Settings(BaseSettings):
     pubsub_push_audience: str | None = None
     pubsub_push_service_account: str | None = None
 
-    # LLM (Gemini on Vertex AI only; AI Studio keys are not covered by free credits)
+    # LLM. Deployed: Gemini on Vertex AI (AI Studio keys are not covered by free credits).
+    # Local: OpenRouter, defaulting to the same Gemini models.
     llm_enabled: bool = True
+    llm_provider: LlmProvider = LlmProvider.VERTEX
     gemini_flash_model: str = "gemini-2.5-flash"
     gemini_pro_model: str = "gemini-2.5-pro"
+    openrouter_api_key: SecretStr | None = None
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_flash_model: str = "google/gemini-2.5-flash"
+    openrouter_pro_model: str = "google/gemini-2.5-pro"
     llm_max_output_tokens: int = Field(default=1024, ge=64, le=8192)
     copilot_max_tool_calls: int = Field(default=6, ge=1, le=20)
 
@@ -96,6 +107,16 @@ class Settings(BaseSettings):
     # HTTP
     cors_origins: list[str] = ["http://localhost:3000"]
     max_upload_bytes: int = 5 * 1024 * 1024
+
+    @property
+    def llm_configured(self) -> bool:
+        """True when the selected LLM provider has what it needs to be called."""
+        if not self.llm_enabled:
+            return False
+        if self.llm_provider is LlmProvider.OPENROUTER:
+            key = self.openrouter_api_key
+            return key is not None and bool(key.get_secret_value().strip())
+        return bool(self.gcp_project)
 
     @property
     def configured_distributors(self) -> list[str]:

@@ -118,7 +118,13 @@ export default function Home() {
 
 function NewProject() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", customer: "", volumes: "100, 1000, 5000", target: "" });
+  const [form, setForm] = useState<{
+    name: string;
+    customer: string;
+    volumes: string;
+    target: string;
+    dataMode: "cache_first" | "live_first";
+  }>({ name: "", customer: "", volumes: "100, 1000, 5000", target: "", dataMode: "cache_first" });
   const create = useMutation({
     mutationFn: () => {
       const build_quantities = form.volumes
@@ -133,7 +139,7 @@ function NewProject() {
             build_quantities,
             target_ship_date: form.target || null,
             currency: "USD",
-            data_mode: "cache_first",
+            data_mode: form.dataMode,
           },
         }),
       );
@@ -165,6 +171,18 @@ function NewProject() {
         value={form.target}
         onChange={(e) => setForm({ ...form, target: e.target.value })}
       />
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-bold text-ink-2">Distributor prices</span>
+        <select
+          value={form.dataMode}
+          onChange={(e) => setForm({ ...form, dataMode: e.target.value as typeof form.dataMode })}
+          className="rounded border border-rule-strong bg-silk px-2.5 py-1.5 text-base text-ink"
+        >
+          <option value="cache_first">Saved prices first, live lookup for parts we have no price for</option>
+          <option value="live_first">Live lookup for every part (DigiKey, Mouser, element14)</option>
+        </select>
+        <span className="text-xs text-ink-3">Live lookups need distributor keys on the server.</span>
+      </label>
       <ErrorNote error={create.error} />
       <div>
         <Button variant="primary" type="submit" disabled={create.isPending || !form.name}>

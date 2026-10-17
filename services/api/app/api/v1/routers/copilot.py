@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from app.api.deps import ContainerDep
 from app.api.ratelimit import RateLimiter, client_key
 from app.api.v1.schemas import ChatAsk, ChatHistory, ChatSessionCreate
+from app.copilot.service import LLM_UNAVAILABLE
 from app.domain.errors import LlmUnavailableError
 from app.domain.models import ChatSession
 
@@ -46,9 +47,7 @@ async def ask(
 ) -> StreamingResponse:
     copilot = container.copilot
     if copilot.model is None:
-        raise LlmUnavailableError(
-            "The copilot needs Gemini on Vertex AI (set GCP_PROJECT and LLM_ENABLED=true)."
-        )
+        raise LlmUnavailableError(LLM_UNAVAILABLE)
     _limiter.check(client_key(request))
     await container.repos.chat_sessions(pid).get(sid)  # 404 before the stream starts
 
