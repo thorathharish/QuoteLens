@@ -4,15 +4,12 @@ import { useMutation } from "@tanstack/react-query";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { ProvenanceLegend, ProvenanceMark, type Provenance } from "@/components/fact";
 import { RoleSwitcher } from "@/components/role";
 import { ThemeSelect } from "@/components/theme";
-import { Button, ErrorNote, Field, Skeleton } from "@/components/ui";
+import { Button, ErrorNote } from "@/components/ui";
 import { Brand } from "@/components/workspace";
 import { api, unwrap } from "@/lib/api/client";
-import { useProjects } from "@/lib/api/hooks";
-import { dateTime, sentence } from "@/lib/format";
 
 /** One real line from the demo BOM, shown the way QuoteLens explains it. */
 const SPECIMEN: { label: string; value: string; provenance: Provenance; source: string }[] = [
@@ -39,7 +36,6 @@ const STATS = [
 
 export default function Home() {
   const router = useRouter();
-  const projects = useProjects();
   const demo = useMutation({
     mutationFn: () => unwrap(api.POST("/api/v1/demo/projects", { body: { scenario: "motor_controller" } })),
     onSuccess: (seeded) => router.push(`/projects/${seeded.project_id}?job=${seeded.job_id}`),
@@ -49,10 +45,13 @@ export default function Home() {
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-rule bg-[var(--header-bg)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
-          <Brand />
+          <Brand href="/" />
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <ThemeSelect />
             <RoleSwitcher />
+            <Link href="/projects" className="text-sm font-semibold text-mask hover:underline">
+              Your quotes
+            </Link>
           </div>
         </div>
       </header>
@@ -86,12 +85,12 @@ export default function Home() {
                 <Button variant="primary" className="min-h-11 px-5" onClick={() => demo.mutate()} disabled={demo.isPending}>
                   {demo.isPending ? "Preparing the demo…" : "Open the demo project"}
                 </Button>
-                <a
-                  href="#new"
+                <Link
+                  href="/projects?new=1"
                   className="chip inline-flex min-h-11 items-center rounded-lg px-5 text-xs font-semibold tracking-[0.12em] text-ink uppercase transition-colors hover:text-mask active:translate-y-px"
                 >
                   Start a new quote
-                </a>
+                </Link>
               </div>
               <div className="mt-3">
                 <ErrorNote error={demo.error} />
@@ -138,125 +137,7 @@ export default function Home() {
           </section>
         </div>
 
-        <section id="new" className="mx-auto max-w-7xl scroll-mt-24 px-4 pb-16 sm:px-6">
-          <div className="surface grid grid-cols-1 rounded-[var(--radius-panel)] lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
-            <div className="border-b border-rule p-6 sm:p-10 lg:border-r lg:border-b-0">
-              <NewProject />
-            </div>
-            <div className="p-6 sm:p-10">
-              <h2 className="text-3xl font-light tracking-[-0.04em]">Recent projects</h2>
-              <div className="mt-6">
-                {projects.isPending && (
-                  <div className="flex flex-col gap-2">
-                    <Skeleton className="h-14 w-full" />
-                    <Skeleton className="h-14 w-full" />
-                  </div>
-                )}
-                <ErrorNote error={projects.error} />
-                {projects.data && projects.data.items.length === 0 && (
-                  <p className="text-ink-2">No projects yet. Open the demo or start a new quote.</p>
-                )}
-                <ul className="flex flex-col border-t border-rule">
-                  {projects.data?.items.map((p) => (
-                    <li key={p.id}>
-                      <Link
-                        href={`/projects/${p.id}`}
-                        className="flex items-center justify-between gap-4 border-b border-rule px-2 py-4 transition-colors hover:bg-mask-tint"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-ink">{p.name}</span>
-                          {p.customer && <span className="block text-sm text-ink-3">{p.customer}</span>}
-                        </span>
-                        <span className="flex shrink-0 items-center gap-4">
-                          <span className="label">{sentence(p.status ?? "DRAFT")}</span>
-                          <span className="hidden text-sm text-ink-3 sm:inline">{dateTime(p.updated_at)}</span>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
     </div>
-  );
-}
-
-function NewProject() {
-  const router = useRouter();
-  const [form, setForm] = useState<{
-    name: string;
-    customer: string;
-    volumes: string;
-    target: string;
-    dataMode: "cache_first" | "live_first";
-  }>({ name: "", customer: "", volumes: "100, 1000, 5000", target: "", dataMode: "cache_first" });
-  const create = useMutation({
-    mutationFn: () => {
-      const build_quantities = form.volumes
-        .split(/[,\s]+/)
-        .filter(Boolean)
-        .map(Number);
-      return unwrap(
-        api.POST("/api/v1/projects", {
-          body: {
-            name: form.name,
-            customer: form.customer || null,
-            build_quantities,
-            target_ship_date: form.target || null,
-            currency: "USD",
-            data_mode: form.dataMode,
-          },
-        }),
-      );
-    },
-    onSuccess: (project) => router.push(`/projects/${project.id}/upload`),
-  });
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        create.mutate();
-      }}
-      className="flex min-w-0 flex-col gap-4"
-    >
-      <h2 className="text-3xl font-light tracking-[-0.04em]">Start a new quote</h2>
-      <Field label="Project name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-      <Field label="Customer" value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} />
-      <Field
-        label="Build quantities"
-        hint="Up to five volumes, comma separated. The first one is used for recommendations."
-        value={form.volumes}
-        onChange={(e) => setForm({ ...form, volumes: e.target.value })}
-      />
-      <Field
-        label="Target ship date"
-        type="date"
-        hint="Used to flag lead times that would miss it."
-        value={form.target}
-        onChange={(e) => setForm({ ...form, target: e.target.value })}
-      />
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="label">Distributor prices</span>
-        <select
-          value={form.dataMode}
-          onChange={(e) => setForm({ ...form, dataMode: e.target.value as typeof form.dataMode })}
-          className="w-full min-w-0 rounded-md border border-rule-strong bg-silk px-3 py-2 text-base text-ink transition-colors hover:border-ink-3"
-        >
-          <option value="cache_first">Saved prices first, live lookup for parts we have no price for</option>
-          <option value="live_first">Live lookup for every part (DigiKey, Mouser, element14)</option>
-        </select>
-        <span className="text-xs text-ink-3">Live lookups need distributor keys on the server.</span>
-      </label>
-      <ErrorNote error={create.error} />
-      <div>
-        <Button variant="primary" type="submit" disabled={create.isPending || !form.name}>
-          Create project and upload BOM
-        </Button>
-      </div>
-    </form>
   );
 }

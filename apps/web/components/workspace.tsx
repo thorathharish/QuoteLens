@@ -8,9 +8,9 @@ import { sentence } from "@/lib/format";
 type Project = Schemas["Project"];
 
 /** The wordmark: an embossed monogram key plus the name, as in the template's header. */
-export function Brand() {
+export function Brand({ href = "/projects" }: { href?: string }) {
   return (
-    <Link href="/" className="group flex items-center gap-3 rounded-md" aria-label="QuoteLens home">
+    <Link href={href} className="group flex items-center gap-3 rounded-md" aria-label="QuoteLens: your quotes">
       <span className="chip flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold tracking-tight text-ink">
         QL
       </span>

@@ -14,6 +14,8 @@ type Tone = "neutral" | "blocker" | "gold";
 
 type Item = {
   href: string;
+  /** href is a full path, not relative to the project. */
+  absolute?: boolean;
   label: string;
   description: string;
   icon: keyof typeof ICONS;
@@ -166,8 +168,8 @@ function NavBody({
             )}
             <ul className="flex flex-col gap-0.5">
               {group.items.map((item) => {
-                const href = base + item.href;
-                const active = item.href === "" ? pathname === base : pathname.startsWith(href);
+                const href = item.absolute ? item.href : base + item.href;
+                const active = item.absolute ? false : item.href === "" ? pathname === base : pathname.startsWith(href);
                 return (
                   <li key={item.label}>
                     <Link
@@ -225,6 +227,10 @@ function useGroups(projectId: string): { title: string; items: Item[] }[] {
 
   return [
     {
+      title: "Quotes",
+      items: [{ href: "/projects", label: "All quotes", description: "Back to every project", icon: "projects", absolute: true }],
+    },
+    {
       title: "Understand",
       items: [
         { href: "", label: "Overview", description: "Where the quote stands", icon: "overview" },
@@ -273,6 +279,7 @@ function useGroups(projectId: string): { title: string; items: Item[] }[] {
 }
 
 const ICONS = {
+  projects: "M3 7h7l2 2h9v10H3z",
   overview: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
   bom: "M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01",
   risks: "M12 3 2 20h20L12 3zM12 10v4M12 17h.01",
