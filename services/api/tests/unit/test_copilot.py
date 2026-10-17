@@ -280,3 +280,36 @@ async def test_every_tool_returns_json_with_evidence(
     missing = json.loads(await tools["get_line"].ainvoke({"line": "NOPE-123"}))
     assert missing["error"].startswith("No line matches")
     assert HALL_EVIDENCE in run.evidence_ids
+
+
+async def test_search_lines_finds_data_problems_and_rejects_unknown_codes(
+    grounded: tuple[AsyncClient, Container, ScriptedModel],
+) -> None:
+    from app.copilot.tools import ToolRun, build_tools
+
+    client, container, _ = grounded
+    pid, _sid = await _project_with_session(client, container)
+    tools = {t.name: t for t in build_tools(pid, container.repos, container.insights, ToolRun())}
+    search = tools["search_lines"]
+
+    problems = json.loads(await search.ainvoke({"has_issues": True}))
+    codes = {c.split(":")[0] for issues in problems["issue_details"].values() for c in issues}
+    assert problems["count"] >= 2
+    assert {"MISSING_MPN", "QTY_INVALID"} <= codes
+
+    missing = json.loads(await search.ainvoke({"issue": "missing_mpn"}))
+    assert missing["count"] >= 1
+
+    unknown = json.loads(await search.ainvoke({"issue": "DATA_PROBLEM"}))
+    assert "error" in unknown
+    assert "MISSING_MPN" in unknown["valid_issue_codes"]
+
+
+def test_cited_ids_reads_single_and_grouped_citations() -> None:
+    from app.copilot.service import cited_ids
+
+    answer = (
+        "Short by 52 [E:ev_off_a, E:ev_off_b]. Lead 112 d [E:ev_off_c,ev_off_a]. "
+        "Needed 101 [E:ev_bom_r1]. Not a citation: [E:bad id!]."
+    )
+    assert cited_ids(answer) == ["ev_off_a", "ev_off_b", "ev_off_c", "ev_bom_r1"]
