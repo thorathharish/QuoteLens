@@ -14,6 +14,7 @@ Built for AI Builder Cup 2026, Manufacturing: Intelligent Operations & Industria
 | — | Architecture decision records | [adr/](adr/) |
 | 7 | Implementation plan (phases, milestones, team tracks) | [implementation-plan.md](implementation-plan.md) |
 | — | Demo runbook (walkthrough, checklist, fallbacks) | [demo-runbook.md](demo-runbook.md) |
+| — | Local testing with the real distributor APIs and OpenRouter | [local-testing.md](local-testing.md) |
 
 ## Capability → design traceability
 | Capability | Module | Endpoints (api-contract #) | User flow |

@@ -1,0 +1,13 @@
+Pos.,Bestückungsorte,Qty,Hersteller,MPN,Bezeichnung,Bemerkung
+1,U1,1,Espressif,ESP32-C3-MINI-1-N4,Wi-Fi/BLE module,
+2,U2,1,Bosch,BME280,Environmental sensor,
+3,U3,1,Analog Devices Inc.,ADXL345BCCZ,Accelerometer,
+4,U4,1,TI,TPS63031DSKR,Buck-boost 3.3V,
+5,U5,1,Microchip,MCP73831T-2ACI/OT,Li-Ion charger,
+6,U6,1,STMicroelectronics,USBLC6-2SC6,USB ESD,
+7,U7,1,Microchip,MCP1700T-3302E/TT,LDO 3.3V,
+8,U8,1,TI,TPD2E2U06DRLR,ESD 2ch,
+9,U9,1,NXP,"LM75BD,118",Temperature sensor,
+10,Q1,1,Diodes Incorporated,DMG2305UX-7,P-MOSFET load switch,
+11,Q2,1,Nexperia,"2N7002,215",N-MOSFET,
+12,D1,1,Nexperia,"BAT54S,215",Schottky dual,
