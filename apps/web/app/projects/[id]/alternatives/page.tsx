@@ -95,7 +95,7 @@ function AlternativeCard({
   const fit = FIT[alt.fit_class] ?? FIT.NOT_SUITABLE!;
   const summary = alt.offers_summary as Record<string, string | number | null>;
   return (
-    <article className="rounded-[var(--radius-panel)] bg-silk">
+    <article className="surface rounded-[var(--radius-panel)]">
       <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
         <div>
           <span className="code font-semibold">{alt.candidate_mpn}</span>

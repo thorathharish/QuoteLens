@@ -32,12 +32,12 @@ export const useRole = () => useContext(RoleContext);
 export function RoleSwitcher() {
   const { role, change } = useRole();
   return (
-    <label className="flex items-center gap-2 text-sm text-ink-2">
-      <span>Acting as</span>
+    <label className="flex items-center gap-2">
+      <span className="label">Acting as</span>
       <select
         value={role}
         onChange={(e) => change(e.target.value as Role)}
-        className="rounded-md border border-rule-strong bg-silk px-2 py-1 text-sm text-ink"
+        className="chip rounded-md px-2 py-1.5 text-sm text-ink"
       >
         {ROLES.map((r) => (
           <option key={r.value} value={r.value}>

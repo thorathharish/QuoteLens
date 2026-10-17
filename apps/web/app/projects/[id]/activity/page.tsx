@@ -12,7 +12,7 @@ export default function ActivityPage() {
   if (audit.error) return <ErrorNote error={audit.error} />;
   if (audit.data.items.length === 0) return <Empty title="No decisions recorded yet" />;
   return (
-    <div className="relative overflow-x-auto rounded-[var(--radius-panel)] bg-silk p-2">
+    <div className="relative overflow-x-auto surface rounded-[var(--radius-panel)] p-2">
       <table className="data-table">
         <thead>
           <tr>

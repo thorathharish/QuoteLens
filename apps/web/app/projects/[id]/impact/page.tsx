@@ -42,8 +42,8 @@ export default function ImpactPage() {
             onClick={() => setVolume(v)}
             className={
               v === volume
-                ? "rounded-md bg-mask px-3 py-1.5 text-sm font-semibold text-silk transition-colors"
-                : "rounded-md bg-silk px-3 py-1.5 text-sm transition-colors hover:bg-mask-tint hover:text-mask active:translate-y-px"
+                ? "metal rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                : "chip rounded-md px-3 py-1.5 text-sm text-ink transition-colors hover:text-mask active:translate-y-px"
             }
           >
             {quantity(v)} boards
@@ -196,7 +196,7 @@ function ImpactRow({
           <FactValue fact={line.contribution_pct} kind="pct" />
         </td>
         <td>
-          <Button variant="quiet" className="whitespace-nowrap" onClick={onToggle} aria-expanded={open}>
+          <Button variant="quiet" className="text-sm font-semibold tracking-normal whitespace-nowrap normal-case" onClick={onToggle} aria-expanded={open}>
             {open ? "Hide steps" : "Show steps"}
           </Button>
         </td>

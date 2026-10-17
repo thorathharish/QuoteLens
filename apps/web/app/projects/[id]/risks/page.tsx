@@ -101,8 +101,8 @@ function RiskItem({
     <li
       id={risk.id}
       className={clsx(
-        "scroll-mt-6 rounded-[var(--radius-panel)] bg-silk px-5 py-4 target:ring-2 target:ring-mask",
-        risk.severity === "BLOCKER" && !closed && "border-l-4 border-blocker",
+        "surface scroll-mt-40 rounded-[var(--radius-panel)] px-5 py-4 target:ring-2 target:ring-mask",
+        risk.severity === "BLOCKER" && !closed && "border-l-2 border-l-blocker",
         closed && "opacity-70",
       )}
     >
