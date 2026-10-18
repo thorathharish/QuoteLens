@@ -38,7 +38,7 @@ class ProjectCreate(ApiModel):
     # Surrounding whitespace is trimmed first, so a name of only spaces is rejected.
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
     customer: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] | None = None
-    currency: str = Field(default="USD", pattern="^[A-Z]{3}$")
+    currency: Literal["USD", "EUR", "GBP", "INR", "JPY", "CNY", "SGD", "AUD", "CAD"] = "USD"
     build_quantities: list[Annotated[int, Field(ge=1, le=1_000_000)]] = Field(
         min_length=1, max_length=5
     )

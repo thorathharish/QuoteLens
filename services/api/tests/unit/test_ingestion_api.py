@@ -151,6 +151,13 @@ async def test_upload_errors_use_the_envelope(api_client: AsyncClient) -> None:
     )
     assert no_header.status_code == 422
 
+    header_only = await api_client.post(
+        f"/api/v1/projects/{pid}/bom",
+        files={"file": ("bom.csv", b"Reference,Quantity,Manufacturer,MPN\n", "text/csv")},
+    )
+    assert header_only.status_code == 422
+    assert "no BOM lines" in header_only.json()["error"]["message"]
+
     missing = await api_client.post(
         "/api/v1/projects/prj_missing/bom",
         files={"file": ("bom.csv", b"MPN,Qty\nX,1\n", "text/csv")},
