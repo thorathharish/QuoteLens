@@ -61,6 +61,11 @@ for role in roles/datastore.user roles/bigquery.dataEditor roles/bigquery.jobUse
             roles/aiplatform.user roles/secretmanager.secretAccessor; do
   grant_project "$(sa_email "$SA_WORKER")" "$role"
 done
+# Cloud Build runs as the Compute Engine default service account. New projects (especially
+# inside organizations) no longer give it Editor automatically, so builds fail to read
+# their own uploaded source. Grant exactly what a build needs.
+PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+grant_project "${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" roles/cloudbuild.builds.builder
 # The api signs GCS download URLs via IAM signBlob (no key files).
 gcloud iam service-accounts add-iam-policy-binding "$(sa_email "$SA_API")" \
   --member="serviceAccount:$(sa_email "$SA_API")" \

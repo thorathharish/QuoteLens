@@ -2,6 +2,10 @@
 
 Free-tier notes: writes are batched (max 500 per batch) and pagination uses
 `limit + 1` to detect further pages without an extra count query.
+
+Firestore rejects arrays nested directly inside arrays (e.g. a spreadsheet preview grid),
+so inner arrays are wrapped in a one-key map on write and unwrapped on read. Callers see
+plain nested lists either way.
 """
 
 from collections.abc import Mapping, Sequence
@@ -18,6 +22,28 @@ from app.infra.repositories.base import (
 )
 
 _BATCH_LIMIT = 500
+_ARRAY_KEY = "__array__"
+
+
+def encode_nested_arrays(value: Any, inside_array: bool = False) -> Any:
+    """Wrap each array that sits directly inside an array: [[1]] becomes [{"__array__": [1]}]."""
+    if isinstance(value, dict):
+        return {k: encode_nested_arrays(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        items = [encode_nested_arrays(v, inside_array=True) for v in value]
+        return {_ARRAY_KEY: items} if inside_array else items
+    return value
+
+
+def decode_nested_arrays(value: Any) -> Any:
+    """Inverse of encode_nested_arrays."""
+    if isinstance(value, dict):
+        if set(value) == {_ARRAY_KEY}:
+            return [decode_nested_arrays(v) for v in value[_ARRAY_KEY]]
+        return {k: decode_nested_arrays(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [decode_nested_arrays(v) for v in value]
+    return value
 
 
 class FirestoreDocumentStore:
@@ -35,10 +61,10 @@ class FirestoreDocumentStore:
 
     async def get(self, collection: CollectionPath, doc_id: str) -> Document | None:
         snapshot = await self._collection(collection).document(doc_id).get()
-        return snapshot.to_dict() if snapshot.exists else None
+        return decode_nested_arrays(snapshot.to_dict()) if snapshot.exists else None
 
     async def set(self, collection: CollectionPath, doc_id: str, data: Document) -> None:
-        await self._collection(collection).document(doc_id).set(data)
+        await self._collection(collection).document(doc_id).set(encode_nested_arrays(data))
 
     async def set_many(self, collection: CollectionPath, docs: Mapping[str, Document]) -> None:
         coll = self._collection(collection)
@@ -46,7 +72,7 @@ class FirestoreDocumentStore:
         for start in range(0, len(items), _BATCH_LIMIT):
             batch = self._client.batch()
             for doc_id, data in items[start : start + _BATCH_LIMIT]:
-                batch.set(coll.document(doc_id), data)
+                batch.set(coll.document(doc_id), encode_nested_arrays(data))
             await batch.commit()
 
     async def delete(self, collection: CollectionPath, doc_id: str) -> None:
@@ -64,12 +90,17 @@ class FirestoreDocumentStore:
         query: Any = coll
         for f in filters:
             query = query.where(filter=firestore.FieldFilter(f.field, f.op, f.value))
+        direction = (
+            firestore.Query.DESCENDING
+            if order_by is not None and order_by.descending
+            else firestore.Query.ASCENDING
+        )
         if order_by is not None:
-            direction = (
-                firestore.Query.DESCENDING if order_by.descending else firestore.Query.ASCENDING
-            )
             query = query.order_by(order_by.field, direction=direction)
-        query = query.order_by("__name__")
+        # The id tie-break runs in the same direction as the sort: Firestore then serves the
+        # query from its automatic single-field index. Mixed directions (field DESC, id ASC)
+        # would need a composite index for every descending listing.
+        query = query.order_by("__name__", direction=direction)
         if cursor is not None:
             cursor_snapshot = await coll.document(cursor).get()
             if cursor_snapshot.exists:
@@ -79,7 +110,7 @@ class FirestoreDocumentStore:
         has_more = len(snapshots) > limit
         page = snapshots[:limit]
         return QueryResult(
-            docs=[(s.id, s.to_dict()) for s in page],
+            docs=[(s.id, decode_nested_arrays(s.to_dict())) for s in page],
             next_cursor=page[-1].id if has_more and page else None,
         )
 
