@@ -126,6 +126,14 @@ run run deploy quotelens-web --image "${IMAGE_BASE}/web:${TAG}" --region "$REGIO
   --set-env-vars "API_BASE_URL=${API_URL},API_AUDIENCE=${API_URL}"
 run run services add-iam-policy-binding quotelens-api --region "$REGION" \
   --member "serviceAccount:$(sa web)" --role roles/run.invoker >/dev/null
+# Organizations with domain-restricted sharing refuse the allUsers binding that
+# --allow-unauthenticated relies on. Cloud Run's supported alternative for a public site
+# is to switch off the invoker IAM check on that one service (api and worker stay private).
+if ! gcloud run services get-iam-policy quotelens-web --region "$REGION" --project "$PROJECT_ID" \
+     --format="value(bindings.members)" | grep -q allUsers; then
+  log "Public access via allUsers was refused (organization policy); disabling the invoker check on web only"
+  run run services update quotelens-web --region "$REGION" --no-invoker-iam-check >/dev/null
+fi
 WEB_URL="$(url_of quotelens-web)"
 
 log "Smoke test"

@@ -77,3 +77,23 @@ async def test_deleting_project_removes_nested_collections(repos: Repositories) 
 
     assert await repos.projects.find("prj_1") is None
     assert await repos.lines("prj_1").all() == []
+
+
+def test_firestore_nested_arrays_round_trip() -> None:
+    from app.infra.repositories.firestore import decode_nested_arrays, encode_nested_arrays
+
+    doc = {
+        "preview_rows": [["U1", "1", None], ["U2", "2", "Bosch"]],
+        "refdes": ["R1", "R2"],
+        "breaks": [{"qty": 1, "tiers": [[1, 2]]}],
+        "plain": "x",
+    }
+    encoded = encode_nested_arrays(doc)
+    # No array may sit directly inside another array once encoded.
+    assert encoded["preview_rows"] == [
+        {"__array__": ["U1", "1", None]},
+        {"__array__": ["U2", "2", "Bosch"]},
+    ]
+    assert encoded["refdes"] == ["R1", "R2"]
+    assert encoded["breaks"][0]["tiers"] == [{"__array__": [1, 2]}]
+    assert decode_nested_arrays(encoded) == doc
