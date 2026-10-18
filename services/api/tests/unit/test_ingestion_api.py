@@ -10,6 +10,10 @@ from app.domain.enums import ProjectStatus
 from app.infra.jobbus import InlineJobBus
 
 SAMPLES = Path(__file__).resolve().parents[4] / "data" / "samples"
+SAMPLE_BOM = (
+    Path(__file__).resolve().parents[4] / "apps/web/public/samples/QuoteLens-sample-BOM.xlsx"
+)
+SAMPLE_BOM_BYTES = SAMPLE_BOM.read_bytes()
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
@@ -191,3 +195,45 @@ async def test_project_validation_list_and_delete(
     assert deleted.status_code == 204
     assert (await api_client.get(f"/api/v1/projects/{pid}")).status_code == 404
     assert await container.repos.uploads(pid).all() == []
+
+
+async def test_downloadable_sample_bom_exercises_every_feature(
+    api_client: AsyncClient, container: Container
+) -> None:
+    """The sample offered in the New quote panel: title block, AI-mapped headers, and the
+    demo's blockers and risks once the two German columns are mapped."""
+    pid = await _create_project(api_client)
+    upload = await api_client.post(
+        f"/api/v1/projects/{pid}/bom",
+        files={"file": (SAMPLE_BOM.name, SAMPLE_BOM_BYTES, XLSX)},
+    )
+    assert upload.status_code == 200, upload.text
+    preview = upload.json()
+    assert preview["selected_sheet"] == "BOM"
+    assert preview["header_row"] == 4  # below the title block
+    assert preview["data_rows"] == 60
+    by_header = {m["header"]: m for m in preview["proposed_mapping"]}
+    assert by_header["Manufacturer P/N"]["field"] == "mpn"
+    assert by_header["Remarks"]["field"] == "notes"
+    # Left for the AI mapper (none in tests); the user confirms them like the AI would.
+    assert by_header["Hersteller"]["method"] != "ALIAS"
+    assert by_header["Bestückungsorte"]["method"] != "ALIAS"
+
+    confirmed = await api_client.put(
+        f"/api/v1/projects/{pid}/bom/mapping",
+        json={
+            "upload_id": preview["upload_id"],
+            "mapping": [
+                {"column_index": by_header["Hersteller"]["column_index"], "field": "manufacturer"},
+                {"column_index": by_header["Bestückungsorte"]["column_index"], "field": "refdes"},
+            ],
+        },
+    )
+    assert confirmed.status_code == 202, confirmed.text
+    await _drain(container)
+
+    risks = (await api_client.get(f"/api/v1/projects/{pid}/risks")).json()
+    assert risks["summary"]["open_blockers"] == 3
+    rules = {r["rule_id"] for r in risks["items"]}
+    # Obsolete, stock, lead time, price spread, MOQ excess, target price, missing data...
+    assert {"L01", "D04", "D01", "S01", "P02", "P03"} <= rules, sorted(rules)
