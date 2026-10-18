@@ -2,6 +2,9 @@
 
 Response bodies mirror the real API shapes observed on 2026-10-17 (trimmed)."""
 
+import asyncio
+import logging
+import time
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -191,10 +194,59 @@ async def test_digikey_not_found_and_token_refresh_on_401() -> None:
     respx.get(url__regex=r".*/TYPO123/productdetails").mock(
         side_effect=[httpx.Response(401), httpx.Response(404, json={"title": "Not Found"})]
     )
+    keyword = respx.post("https://api.digikey.com/products/v4/search/keyword").respond(
+        200, json={"Products": [{"ManufacturerProductNumber": "TYPO1234"}]}
+    )
     result = await DigiKeyProvider("id", "secret").fetch(["TYPO123"])
-    assert result.offers == {}
+    assert result.offers == {}  # the keyword hit is not an exact match
     assert result.errors == []
     assert token.call_count == 2  # refreshed after the 401
+    assert keyword.called
+
+
+@respx.mock
+async def test_digikey_falls_back_to_keyword_search_when_several_products_share_the_mpn() -> None:
+    respx.post("https://api.digikey.com/v1/oauth2/token").respond(
+        200, json={"access_token": "t", "expires_in": 600}
+    )
+    respx.get(url__regex=r".*/INA240A1PWR/productdetails").respond(404)
+    product = DIGIKEY_BODY["Product"]
+    other_maker = {**product, "Manufacturer": {"Name": "Second Source Inc"}}
+    near_miss = {**product, "ManufacturerProductNumber": "INA240A1PWRG4"}
+    respx.post("https://api.digikey.com/products/v4/search/keyword").respond(
+        200,
+        json={
+            "SearchLocaleUsed": {"Currency": "USD"},
+            "Products": [near_miss, product, other_maker, product],
+        },
+    )
+    result = await DigiKeyProvider("id", "secret").fetch(["INA240A1PWR"])
+    offers = result.offers["INA240A1PWR"]
+    assert {o.manufacturer for o in offers} == {"Texas Instruments"}
+    assert len({o.sku for o in offers}) == len(offers)  # the repeated listing is not doubled
+    assert result.components["INA240A1PWR"].manufacturer == "Texas Instruments"
+
+
+@respx.mock
+async def test_mouser_searches_ten_part_numbers_per_call() -> None:
+    route = respx.post("https://api.mouser.com/api/v1/search/partnumber").respond(
+        200, json=MOUSER_BODY
+    )
+    mpns = ["INA240A1PWR", *[f"P{i}" for i in range(11)]]
+    result = await MouserProvider("key").fetch(mpns)
+    assert route.call_count == 2
+    sent = route.calls[0].request.content.decode()
+    assert "INA240A1PWR|P0|P1" in sent
+    assert list(result.offers) == ["INA240A1PWR"]
+
+
+async def test_pacer_spaces_calls_to_the_rate_limit() -> None:
+    from app.sourcing.providers.live import _Pacer
+
+    pacer = _Pacer(20.0)
+    start = time.monotonic()
+    await asyncio.gather(*(pacer.wait() for _ in range(5)))
+    assert time.monotonic() - start >= 0.19  # 4 gaps of 50 ms
 
 
 @respx.mock
@@ -350,3 +402,28 @@ async def test_cache_write_failure_is_reported_not_fatal() -> None:
     ).fetch(["P1"], DataMode.CACHE_FIRST)
     assert result.offers["P1"]
     assert result.errors == ["Live prices were used but could not be cached"]
+
+
+@respx.mock
+async def test_failed_lookups_never_log_the_api_key(caplog: pytest.LogCaptureFixture) -> None:
+    from app.logging import JsonFormatter
+
+    respx.post("https://api.mouser.com/api/v1/search/partnumber").respond(403)
+    respx.get("https://api.element14.com/catalog/products").respond(403)
+    with caplog.at_level(logging.DEBUG):
+        await MouserProvider("sekret-mouser").fetch(["X1"])
+        await Element14Provider("sekret-e14", "in.element14.com").fetch(["X1"])
+    formatter = JsonFormatter()
+    lines = [formatter.format(record) for record in caplog.records]
+    assert any("HTTP 403" in line for line in lines), lines
+    assert not any("sekret" in line for line in lines), lines
+
+
+def test_log_lines_mask_credentials_in_urls() -> None:
+    from app.logging import redact
+
+    url = "https://api.mouser.com/x?apiKey=abc123&q=1 https://e14/p?callInfo.apiKey=def&x=2"
+    assert (
+        redact(url)
+        == "https://api.mouser.com/x?apiKey=***&q=1 https://e14/p?callInfo.apiKey=***&x=2"
+    )

@@ -317,7 +317,7 @@ function AssumptionsEditor({ projectId }: { projectId: string }) {
     ),
   );
   return (
-    <Panel title="Quote adders and exchange rate">
+    <Panel id="rates" title="Quote adders and exchange rate">
       <form
         className="grid grid-cols-2 gap-3"
         onSubmit={(e) => {

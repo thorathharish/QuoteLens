@@ -1626,11 +1626,12 @@ export interface components {
             /**
              * Currency
              * @default USD
+             * @enum {string}
              */
-            currency: string;
+            currency: "USD" | "EUR" | "GBP" | "INR" | "JPY" | "CNY" | "SGD" | "AUD" | "CAD";
             /** Customer */
             customer?: string | null;
-            /** @default cache_first */
+            /** @default live_first */
             data_mode: components["schemas"]["DataMode"];
             /** Name */
             name: string;
@@ -2280,7 +2281,9 @@ export interface operations {
     delete_project_api_v1_projects__pid__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Demo-Role"?: components["schemas"]["DemoRole"];
+            };
             path: {
                 pid: string;
             };

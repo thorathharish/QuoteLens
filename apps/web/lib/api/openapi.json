@@ -3056,7 +3056,17 @@
      },
      "currency": {
       "default": "USD",
-      "pattern": "^[A-Z]{3}$",
+      "enum": [
+       "USD",
+       "EUR",
+       "GBP",
+       "INR",
+       "JPY",
+       "CNY",
+       "SGD",
+       "AUD",
+       "CAD"
+      ],
       "title": "Currency",
       "type": "string"
      },
@@ -3074,7 +3084,7 @@
      },
      "data_mode": {
       "$ref": "#/components/schemas/DataMode",
-      "default": "cache_first"
+      "default": "live_first"
      },
      "name": {
       "maxLength": 120,
@@ -4576,6 +4586,15 @@
       "schema": {
        "title": "Pid",
        "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "X-Demo-Role",
+      "required": false,
+      "schema": {
+       "$ref": "#/components/schemas/DemoRole",
+       "default": "VIEWER"
       }
      }
     ],

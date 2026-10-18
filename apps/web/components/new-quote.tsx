@@ -9,7 +9,6 @@ import { FIELDS, METHOD_LABEL, clashingColumns, mappingChanges, type FieldName }
 import { Button, ErrorNote, Field } from "./ui";
 
 type Preview = Schemas["UploadPreview"];
-type DataMode = "cache_first" | "live_first";
 type Step = "details" | "columns";
 
 const STEPS = ["Details", "BOM", "Columns", "Analysis"] as const;
@@ -31,7 +30,7 @@ function eightWeeksFromToday(): string {
 export const NewQuotePanel = forwardRef<HTMLInputElement>(function NewQuotePanel(_, firstField) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ name: "", customer: "", volumes: "100, 1000, 5000", target: "", dataMode: "cache_first" as DataMode });
+  const [form, setForm] = useState({ name: "", customer: "", volumes: "100, 1000, 5000", target: "" });
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -92,7 +91,7 @@ export const NewQuotePanel = forwardRef<HTMLInputElement>(function NewQuotePanel
               build_quantities: volumes,
               target_ship_date: form.target || null,
               currency: "USD",
-              data_mode: form.dataMode,
+              data_mode: "live_first", // every quote uses live distributor data
             },
           }),
         );
@@ -201,18 +200,10 @@ export const NewQuotePanel = forwardRef<HTMLInputElement>(function NewQuotePanel
               onChange={(e) => setForm({ ...form, target: e.target.value })}
               disabled={projectId !== null}
             />
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="label">Distributor prices</span>
-              <select
-                value={form.dataMode}
-                onChange={(e) => setForm({ ...form, dataMode: e.target.value as DataMode })}
-                disabled={projectId !== null}
-                className="w-full min-w-0 rounded-md border border-rule-strong bg-silk px-3 py-2 text-base text-ink"
-              >
-                <option value="cache_first">Saved prices first, live lookup for the rest</option>
-                <option value="live_first">Live lookup for every part</option>
-              </select>
-            </label>
+            <p className="flex items-start gap-2 text-xs text-ink-3">
+              <span className="status-dot mt-1 text-mask" aria-hidden />
+              Prices, stock and lead times are fetched live from DigiKey, Mouser and element14 for every part.
+            </p>
 
             <DropZone file={file} onPick={pick} />
             {!projectId && (

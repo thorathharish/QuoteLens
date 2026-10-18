@@ -7,6 +7,7 @@ import { EvidenceProvider, ProvenanceLegend } from "@/components/fact";
 import { RoleSwitcher } from "@/components/role";
 import { ErrorNote, PageSkeleton, Spinner } from "@/components/ui";
 import { ThemeSelect } from "@/components/theme";
+import { NextStepBar } from "@/components/next-step";
 import { MobileNav, SideNav } from "@/components/side-nav";
 import { Brand, DataModeTag, StatusTag } from "@/components/workspace";
 import { useInvalidateProject, useJob, useProject } from "@/lib/api/hooks";
@@ -51,6 +52,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             {project.isPending && <PageSkeleton />}
             <ErrorNote error={project.error} />
             {project.data && children}
+            {project.data && <NextStepBar projectId={id} status={project.data.status} />}
           </main>
           {project.data && <CopilotPane projectId={id} />}
         </div>
