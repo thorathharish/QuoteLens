@@ -60,11 +60,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
           <section className="surface frame grid grid-cols-1 rounded-[var(--radius-panel)] lg:grid-cols-[0.92fr_1.08fr]">
             <div className="flex flex-col border-b border-rule p-6 sm:p-10 lg:border-r lg:border-b-0">
-              <span className="chip inline-flex items-center gap-2 self-start rounded-full px-3 py-1.5 text-[0.6875rem] font-medium tracking-[0.14em] text-mask uppercase">
-                <span className="status-dot" aria-hidden />
-                Demo BOM ready
-              </span>
-              <p className="label mt-8">Motor controller · 59 lines · 3 blockers</p>
+              <p className="label">Motor controller · 59 lines · 3 blockers</p>
               <h1 className="text-display mt-4 max-w-[11ch] text-ink">Quotes you can defend, line by line.</h1>
               <p className="mt-6 max-w-[32rem] leading-relaxed text-ink-2 sm:text-lg">
                 Upload a customer BOM. QuoteLens prices every part across distributors, shows the evidence behind
