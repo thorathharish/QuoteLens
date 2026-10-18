@@ -146,6 +146,13 @@ async def test_upload_errors_use_the_envelope(api_client: AsyncClient) -> None:
     assert bad.status_code == 415
     assert bad.json()["error"]["code"] == "UNSUPPORTED_FILE"
 
+    encrypted = await api_client.post(
+        f"/api/v1/projects/{pid}/bom",
+        files={"file": ("bom.xlsx", bytes.fromhex("D0CF11E0A1B11AE1") + b"\x00" * 512)},
+    )
+    assert encrypted.status_code == 415
+    assert "password-protected" in encrypted.json()["error"]["message"]
+
     no_header = await api_client.post(
         f"/api/v1/projects/{pid}/bom", files={"file": ("bom.csv", b"a,b\n1,2\n", "text/csv")}
     )
@@ -176,6 +183,11 @@ async def test_project_validation_list_and_delete(
     listed = (await api_client.get("/api/v1/projects")).json()
     assert pid in [p["id"] for p in listed["items"]]
 
-    assert (await api_client.delete(f"/api/v1/projects/{pid}")).status_code == 204
+    refused = await api_client.delete(
+        f"/api/v1/projects/{pid}", headers={"X-Demo-Role": "QUOTE_ENGINEER"}
+    )
+    assert refused.status_code == 403
+    deleted = await api_client.delete(f"/api/v1/projects/{pid}", headers={"X-Demo-Role": "MANAGER"})
+    assert deleted.status_code == 204
     assert (await api_client.get(f"/api/v1/projects/{pid}")).status_code == 404
     assert await container.repos.uploads(pid).all() == []

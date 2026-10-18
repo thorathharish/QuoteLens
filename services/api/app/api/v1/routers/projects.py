@@ -6,6 +6,8 @@ from fastapi import APIRouter, Query, Response
 
 from app.api.deps import ContainerDep, DemoRoleDep, ReposDep
 from app.api.v1.schemas import ProjectCreate, ProjectPage
+from app.domain.enums import DemoRole
+from app.domain.errors import ForbiddenError
 from app.domain.ids import new_id
 from app.domain.models import AuditEvent, Project
 from app.infra.repositories import OrderBy
@@ -47,7 +49,11 @@ async def get_project(pid: str, repos: ReposDep) -> Project:
 
 
 @router.delete("/{pid}", status_code=204)
-async def delete_project(pid: str, container: ContainerDep) -> Response:
+async def delete_project(pid: str, container: ContainerDep, role: DemoRoleDep) -> Response:
+    # The demo has no login, so any visitor could delete anyone's project. Deleting is
+    # limited to the program manager role (still a demo control, not security).
+    if role is not DemoRole.MANAGER:
+        raise ForbiddenError("Only a program manager can delete a project")
     await container.repos.projects.get(pid)  # 404 if missing
     await container.repos.projects.delete(pid)
     await container.blobs.delete_prefix(f"uploads/{pid}/")

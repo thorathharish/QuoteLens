@@ -27,6 +27,13 @@ class UnauthenticatedError(DomainError):
     http_status = 401
 
 
+class ForbiddenError(DomainError):
+    """The demo role may not do this (a demo control: there is no login)."""
+
+    code = "FORBIDDEN"
+    http_status = 403
+
+
 class NotFoundError(DomainError):
     code = "NOT_FOUND"
     http_status = 404

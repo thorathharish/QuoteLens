@@ -2,10 +2,12 @@
 
 import clsx from "clsx";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
 import { FactValue } from "@/components/fact";
-import { Empty, ErrorNote, PageSkeleton, Panel, SeverityTag } from "@/components/ui";
-import { useOverview, useProject } from "@/lib/api/hooks";
+import { Button, Empty, ErrorNote, PageSkeleton, Panel, SeverityTag } from "@/components/ui";
+import { api, unwrap } from "@/lib/api/client";
+import { useInvalidateProject, useOverview, useProject } from "@/lib/api/hooks";
 import { percent, quantity } from "@/lib/format";
 
 const SEVERITIES = ["BLOCKER", "HIGH", "MEDIUM", "LOW"] as const;
@@ -36,9 +38,23 @@ export default function OverviewPage() {
       </Empty>
     );
   }
+  if (project.data?.status === "FAILED") {
+    return <AnalysisFailed projectId={id} hasLines={(project.data.stats?.lines ?? 0) > 0} />;
+  }
   if (overview.isPending) return <PageSkeleton label="Loading overview" />;
   if (overview.error) return <ErrorNote error={overview.error} />;
   const o = overview.data;
+  if (o.lines === 0) {
+    // Never show "Ready to quote" for a BOM with no lines.
+    return (
+      <Empty title="No BOM lines yet">
+        <Link href={`/projects/${id}/upload`} className="font-semibold text-mask hover:underline">
+          Upload the customer BOM
+        </Link>{" "}
+        to price it.
+      </Empty>
+    );
+  }
   const r = o.risks;
   const blockers = r.unresolved_by_severity?.BLOCKER ?? 0;
 
@@ -170,5 +186,43 @@ export default function OverviewPage() {
         </Panel>
       </aside>
     </div>
+  );
+}
+
+/** The analysis stopped: say so, and offer the two ways out (run it again, or re-upload). */
+function AnalysisFailed({ projectId, hasLines }: { projectId: string; hasLines: boolean }) {
+  const router = useRouter();
+  const invalidate = useInvalidateProject(projectId);
+  const rerun = useMutation({
+    mutationFn: () =>
+      unwrap(api.POST("/api/v1/projects/{pid}/analysis", { params: { path: { pid: projectId } }, body: {} })),
+    onSuccess: async (accepted) => {
+      await invalidate();
+      router.push(`/projects/${projectId}?job=${accepted.job_id}`);
+    },
+  });
+  return (
+    <Empty title="The analysis did not finish">
+      <p>
+        Something went wrong while pricing and checking this BOM. Nothing you entered is lost. Run the analysis
+        again, or upload the BOM again if the file may be the problem.
+      </p>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        {hasLines && (
+          <Button variant="primary" onClick={() => rerun.mutate()} disabled={rerun.isPending}>
+            {rerun.isPending ? "Starting…" : "Run the analysis again"}
+          </Button>
+        )}
+        <Link
+          href={`/projects/${projectId}/upload`}
+          className="chip inline-flex min-h-9 items-center rounded-lg px-4 text-xs font-semibold tracking-[0.12em] text-ink uppercase hover:text-mask"
+        >
+          Upload the BOM again
+        </Link>
+      </div>
+      <div className="mt-3">
+        <ErrorNote error={rerun.error} />
+      </div>
+    </Empty>
   );
 }
