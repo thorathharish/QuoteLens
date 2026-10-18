@@ -14,6 +14,7 @@ from app.domain.models import (
     Component,
     MatchResult,
     Offer,
+    OfferRecommendation,
     PriceBreak,
     Project,
 )
@@ -24,6 +25,7 @@ from app.risk.rules import (
     l02_not_recommended,
     p02_target_price,
     p04_stale_price,
+    p05_no_price,
     s03_lead_time,
     s04_no_authorized_source,
 )
@@ -187,3 +189,24 @@ def test_unknown_inventory_never_produces_a_false_shortage() -> None:
     known_empty = l01_end_of_life(_ctx(offers=[_offer(stock=0)], component=component))
     assert known_empty is not None
     assert known_empty.severity is Severity.BLOCKER
+
+
+def test_no_price_points_to_the_missing_exchange_rate() -> None:
+    reasons = ["no eligible offer", "Mouser: no INR->USD exchange rate in the assumptions"]
+    line = _line(
+        selected_offer_id=None,
+        recommendation=OfferRecommendation(offer_id=None, volume=100, reasons=reasons),
+    )
+    risk = p05_no_price(_ctx(line, [_offer(currency="INR", distributor="Mouser")]))
+    assert risk is not None
+    labels = [a.label for a in risk.suggested_actions]
+    assert labels[0] == "Set the INR exchange rate in Cost impact"
+    other = _line(
+        selected_offer_id=None,
+        recommendation=OfferRecommendation(
+            offer_id=None, volume=100, reasons=["x", "MOQ too high"]
+        ),
+    )
+    plain = p05_no_price(_ctx(other))
+    assert plain is not None
+    assert [a.label for a in plain.suggested_actions] == ["Request a quote from the distributor"]

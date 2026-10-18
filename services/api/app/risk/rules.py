@@ -5,6 +5,7 @@ Explanations are deterministic templates filled from the metrics, so they can ne
 a number the data does not contain.
 """
 
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -480,6 +481,9 @@ def p04_stale_price(ctx: RiskContext) -> Risk | None:
     )
 
 
+_NO_FX_RATE = re.compile(r"no ([A-Z]{3})->[A-Z]{3} exchange rate")
+
+
 def p05_no_price(ctx: RiskContext) -> Risk | None:
     component = ctx.component
     if (
@@ -491,6 +495,9 @@ def p05_no_price(ctx: RiskContext) -> Risk | None:
     ):
         return None
     reasons = ctx.line.recommendation.reasons if ctx.line.recommendation else []
+    # Offers priced only in a currency without a rate (Mouser and element14 India quote in INR)
+    # become usable once the user sets that rate.
+    missing_fx = sorted({m.group(1) for r in reasons if (m := _NO_FX_RATE.search(r))})
     return ctx.risk(
         "P05",
         C.PRICE,
@@ -501,7 +508,19 @@ def p05_no_price(ctx: RiskContext) -> Risk | None:
         + ".",
         evidence=[o.evidence_id for o in ctx.authorized],
         metrics={"reasons": list(reasons)},
-        actions=[(A.CONFIRM_WITH_CUSTOMER, "Request a quote from the distributor")],
+        actions=[
+            *(
+                [
+                    (
+                        A.SELECT_OFFER,
+                        f"Set the {' and '.join(missing_fx)} exchange rate in Cost impact",
+                    )
+                ]
+                if missing_fx
+                else []
+            ),
+            (A.CONFIRM_WITH_CUSTOMER, "Request a quote from the distributor"),
+        ],
     )
 
 

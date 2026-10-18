@@ -6,6 +6,7 @@ every log line emitted while handling a request or job carries them automaticall
 
 import json
 import logging
+import re
 import sys
 from contextvars import ContextVar
 from datetime import UTC, datetime
@@ -21,13 +22,25 @@ _CONTEXT_VARS = {
 }
 
 
+# Credentials that can appear in URLs (Mouser and element14 take the API key as a query
+# parameter) are masked in every log line, whatever logged them.
+_SECRET_PARAM = re.compile(
+    r"((?:api[_-]?key|callInfo\.apiKey|client_secret|access_token|token)=)[^&\s\"']+",
+    re.IGNORECASE,
+)
+
+
+def redact(text: str) -> str:
+    return _SECRET_PARAM.sub(r"\1***", text)
+
+
 class JsonFormatter(logging.Formatter):
     """Emits one JSON object per line using Cloud Logging's `severity`/`message` keys."""
 
     def format(self, record: logging.LogRecord) -> str:
         entry: dict[str, object] = {
             "severity": record.levelname,
-            "message": record.getMessage(),
+            "message": redact(record.getMessage()),
             "logger": record.name,
             "time": datetime.fromtimestamp(record.created, UTC).isoformat(),
         }
@@ -39,7 +52,7 @@ class JsonFormatter(logging.Formatter):
         if isinstance(extra, dict):
             entry.update(extra)
         if record.exc_info:
-            entry["exception"] = self.formatException(record.exc_info)
+            entry["exception"] = redact(self.formatException(record.exc_info))
         return json.dumps(entry, default=str)
 
 
@@ -51,3 +64,6 @@ def configure_logging(level: str = "INFO") -> None:
     root.setLevel(level.upper())
     # Uvicorn's access log duplicates our request logging and is noisy (Logging free tier).
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    # httpx logs every request URL at INFO, query string (and API key) included.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)

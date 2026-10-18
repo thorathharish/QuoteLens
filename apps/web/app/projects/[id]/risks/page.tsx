@@ -2,6 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import clsx from "clsx";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { AskButton } from "@/components/copilot";
@@ -97,6 +98,7 @@ function RiskItem({
   onOpenLine: () => void;
 }) {
   const evidence = useEvidence();
+  const { id: projectId } = useParams<{ id: string }>();
   const closed = risk.status === "RESOLVED" || risk.status === "WAIVED";
   return (
     <li
@@ -130,6 +132,11 @@ function RiskItem({
       {risk.suggested_actions?.length ? (
         <p className="mt-2 text-sm text-ink-2">Suggested: {risk.suggested_actions.map((a) => a.label).join("; ")}</p>
       ) : null}
+      {!closed && risk.suggested_actions?.some((a) => a.label.includes("exchange rate")) && (
+        <Link href={`/projects/${projectId}/impact#rates`} className="mt-1 inline-block text-sm font-medium text-mask hover:underline">
+          Set the exchange rate →
+        </Link>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2">
         <Button variant="quiet" className="-ml-1.5" onClick={() => evidence.open({ evidence_ids: risk.evidence_ids })}>
           Show evidence ({risk.evidence_ids.length})

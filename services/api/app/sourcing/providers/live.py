@@ -55,36 +55,80 @@ def _breaks(pairs: list[tuple[int | None, Decimal | None]]) -> list[CatalogPrice
     return [CatalogPriceBreak(qty=q, price=p) for q, p in breaks]
 
 
+def _describe(exc: Exception) -> str:
+    """A loggable summary of a lookup failure that never includes the request URL."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"HTTP {exc.response.status_code}"
+    return type(exc).__name__
+
+
+class _Pacer:
+    """Spaces call starts to stay under a distributor's rate limit (one per key, so shared by
+    every BOM analyzed in this process). Reserving a slot has no await, so needs no lock."""
+
+    def __init__(self, calls_per_second: float | None) -> None:
+        self._gap = 1 / calls_per_second if calls_per_second else 0.0
+        self._next = 0.0
+
+    async def wait(self) -> None:
+        if not self._gap:
+            return
+        now = time.monotonic()
+        start = max(now, self._next)
+        self._next = start + self._gap
+        if start > now:
+            await asyncio.sleep(start - now)
+
+
 class LiveProvider(ABC):
     name: str
+    batch_size = 1  # part numbers per API call
+    calls_per_second: float | None = None  # the distributor's published rate limit
 
     def __init__(self) -> None:
         self.breaker = CircuitBreaker(self.name)
+        self._pacer = _Pacer(self.calls_per_second)
 
     async def fetch(self, mpns: Sequence[str]) -> ProviderResult:
         result = ProviderResult()
         semaphore = asyncio.Semaphore(CONCURRENCY)
+        unique = list(dict.fromkeys(mpns))
+        batches = [unique[i : i + self.batch_size] for i in range(0, len(unique), self.batch_size)]
         async with httpx.AsyncClient(headers={"Accept": "application/json"}) as client:
 
-            async def one(mpn: str) -> None:
+            async def one(batch: list[str]) -> None:
                 async with semaphore:
+                    await self._pacer.wait()
                     try:
-                        offers, component = await self.lookup(client, mpn)
+                        found = await self.lookup_batch(client, batch)
                     except CircuitOpenError as exc:
                         result.errors.append(str(exc))
                         return
                     except Exception as exc:
-                        logger.warning("%s lookup failed for %s", self.name, mpn, exc_info=True)
+                        # No traceback: httpx errors carry the request URL, and Mouser and
+                        # element14 take their API key as a query parameter.
+                        logger.warning(
+                            "%s lookup failed for %s: %s",
+                            self.name,
+                            ", ".join(batch),
+                            _describe(exc),
+                        )
                         result.errors.append(f"{self.name} lookup failed ({type(exc).__name__})")
                         return
-                    if offers:
-                        result.offers.setdefault(mpn, []).extend(offers)
-                    if component is not None:
-                        result.components.setdefault(mpn, component)
+                    for mpn, (offers, component) in found.items():
+                        if offers:
+                            result.offers.setdefault(mpn, []).extend(offers)
+                        if component is not None:
+                            result.components.setdefault(mpn, component)
 
-            await asyncio.gather(*(one(m) for m in dict.fromkeys(mpns)))
+            await asyncio.gather(*(one(b) for b in batches))
         result.errors = list(dict.fromkeys(result.errors))
         return result
+
+    async def lookup_batch(self, client: httpx.AsyncClient, mpns: list[str]) -> dict[str, Lookup]:
+        """Look up a batch of `batch_size` part numbers; the default sends one call per part."""
+        (mpn,) = mpns
+        return {mpn: await self.lookup(client, mpn)}
 
     @abstractmethod
     async def lookup(self, client: httpx.AsyncClient, mpn: str) -> Lookup: ...
@@ -123,6 +167,7 @@ _DIGIKEY_STATUS = {
 
 class DigiKeyProvider(LiveProvider):
     name = "DigiKey"
+    calls_per_second = 2.0  # 120 calls a minute (and 1,000 a day) per app
 
     def __init__(self, client_id: str, client_secret: str, sandbox: bool = False) -> None:
         super().__init__()
@@ -155,14 +200,16 @@ class DigiKeyProvider(LiveProvider):
             )
             return self._token[0]
 
-    async def lookup(self, client: httpx.AsyncClient, mpn: str) -> Lookup:
-        url = f"{self._host}/products/v4/search/{quote(mpn, safe='')}/productdetails"
+    async def _send(
+        self, client: httpx.AsyncClient, method: str, url: str, **kwargs: Any
+    ) -> httpx.Response:
+        """An authorized call; the token is refreshed once on a 401."""
         for attempt in range(2):
             token = await self._access_token(client, refresh=attempt > 0)
             response = await request(
                 client,
                 self.breaker,
-                "GET",
+                method,
                 url,
                 headers={
                     "Authorization": f"Bearer {token}",
@@ -170,13 +217,55 @@ class DigiKeyProvider(LiveProvider):
                     "X-DIGIKEY-Locale-Currency": "USD",
                     "X-DIGIKEY-Locale-Site": "US",
                 },
+                **kwargs,
             )
             if response.status_code != 401:
                 break
+        return response
+
+    async def lookup(self, client: httpx.AsyncClient, mpn: str) -> Lookup:
+        url = f"{self._host}/products/v4/search/{quote(mpn, safe='')}/productdetails"
+        response = await self._send(client, "GET", url)
+        if response.status_code == 404:
+            # Product details answers 404 when several products share the part number (one
+            # listing per maker or per packaging); keyword search lists them all.
+            await self._pacer.wait()
+            return await self._keyword_lookup(client, mpn)
+        response.raise_for_status()
+        return self.parse(response.json(), mpn)
+
+    async def _keyword_lookup(self, client: httpx.AsyncClient, mpn: str) -> Lookup:
+        response = await self._send(
+            client,
+            "POST",
+            f"{self._host}/products/v4/search/keyword",
+            json={"Keywords": mpn, "Limit": 10, "Offset": 0},
+        )
         if response.status_code == 404:
             return [], None
         response.raise_for_status()
-        return self.parse(response.json(), mpn)
+        body = response.json()
+        exact = [
+            product
+            for product in body.get("Products") or []
+            if normalize_mpn(product.get("ManufacturerProductNumber")) == mpn
+        ]
+        if not exact:
+            return [], None
+        # DigiKey ranks the best listing first; other makers' parts with the same number are
+        # left out rather than mixed in (the matcher flags a maker that differs from the BOM).
+        maker = (exact[0].get("Manufacturer") or {}).get("Name")
+        offers: list[CatalogOffer] = []
+        component: CatalogComponent | None = None
+        for product in exact:
+            if (product.get("Manufacturer") or {}).get("Name") != maker:
+                continue
+            found, details = self.parse(
+                {"Product": product, "SearchLocaleUsed": body.get("SearchLocaleUsed")}, mpn
+            )
+            offers.extend(o for o in found if o.sku not in {x.sku for x in offers})
+            component = component or details
+        return offers, component
 
     def parse(self, body: dict[str, Any], mpn: str) -> Lookup:
         product = body.get("Product") or {}
@@ -256,6 +345,8 @@ _MOUSER_STATUS = {
 
 class MouserProvider(LiveProvider):
     name = "Mouser"
+    batch_size = 10
+    calls_per_second = 0.5  # 30 calls a minute (and 1,000 a day) per key
     URL = "https://api.mouser.com/api/v1/search/partnumber"
 
     def __init__(self, api_key: str) -> None:
@@ -263,16 +354,26 @@ class MouserProvider(LiveProvider):
         self._api_key = api_key
 
     async def lookup(self, client: httpx.AsyncClient, mpn: str) -> Lookup:
+        return (await self.lookup_batch(client, [mpn]))[mpn]
+
+    async def lookup_batch(self, client: httpx.AsyncClient, mpns: list[str]) -> dict[str, Lookup]:
+        # One call searches up to 10 part numbers separated by "|".
         response = await request(
             client,
             self.breaker,
             "POST",
             self.URL,
             params={"apiKey": self._api_key},
-            json={"SearchByPartRequest": {"mouserPartNumber": mpn, "partSearchOptions": "Exact"}},
+            json={
+                "SearchByPartRequest": {
+                    "mouserPartNumber": "|".join(mpns),
+                    "partSearchOptions": "Exact",
+                }
+            },
         )
         response.raise_for_status()
-        return self.parse(response.json(), mpn)
+        body = response.json()
+        return {mpn: self.parse(body, mpn) for mpn in mpns}
 
     def parse(self, body: dict[str, Any], mpn: str) -> Lookup:
         errors = body.get("Errors") or []
@@ -349,6 +450,7 @@ _E14_STATUS = {
 
 class Element14Provider(LiveProvider):
     name = "element14"
+    calls_per_second = 2.0  # 2 calls a second (and 1,000 a day) per key
     URL = "https://api.element14.com/catalog/products"
 
     def __init__(self, api_key: str, store: str) -> None:

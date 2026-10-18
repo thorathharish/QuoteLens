@@ -98,18 +98,20 @@ export function Tag({ children, tone = "neutral" }: { children: React.ReactNode;
 
 /** A framed console surface: hairline edge, tone gradient, label-style title over a rule. */
 export function Panel({
+  id,
   title,
   action,
   children,
   className,
 }: {
+  id?: string;
   title?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <section className={clsx("surface min-w-0 rounded-[var(--radius-panel)]", className)}>
+    <section id={id} className={clsx("surface min-w-0 scroll-mt-24 rounded-[var(--radius-panel)]", className)}>
       {(title || action) && (
         <header className="flex min-h-12 items-center justify-between gap-4 border-b border-rule px-5 py-3">
           <h2 className="label !text-ink-2">{title}</h2>
