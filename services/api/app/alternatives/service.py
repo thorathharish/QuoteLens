@@ -91,6 +91,7 @@ class AlternativesService:
         ensure_not_busy(project)
         alt = await self.repos.alternatives(project_id).get(alternative_id)
         line = await self.repos.lines(project_id).get(alt.line_id)
+        _ensure_decidable(alt, approve)
 
         if not approve:
             rejected = alt.model_copy(
@@ -163,3 +164,17 @@ class AlternativesJob:
         found = await self.service.investigate(job.project_id, line_id)
         if not found:
             await ctx.warn("No known alternates for this part in the catalog")
+
+
+def _ensure_decidable(alt: Alternative, approve: bool) -> None:
+    """A decision is recorded once (a double click must not re-apply it or duplicate the
+    audit entry). An approved alternate has already replaced the line, so it cannot simply be
+    rejected; a rejected one may still be approved if the reviewer changes their mind."""
+    if alt.status is AlternativeStatus.APPROVED:
+        raise ConflictError(
+            "This alternate is already approved and applied to the line. To undo it, approve a "
+            "different alternate or edit the line.",
+            {"status": alt.status.value},
+        )
+    if alt.status is AlternativeStatus.REJECTED and not approve:
+        raise ConflictError("This alternate is already rejected", {"status": alt.status.value})
