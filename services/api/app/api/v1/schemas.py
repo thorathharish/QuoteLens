@@ -43,7 +43,8 @@ class ProjectCreate(ApiModel):
         min_length=1, max_length=5
     )
     target_ship_date: date | None = None
-    data_mode: DataMode = DataMode.CACHE_FIRST
+    # New quotes fetch live distributor data for every part; the demo uses DEMO_SNAPSHOT.
+    data_mode: DataMode = DataMode.LIVE_FIRST
 
     @field_validator("customer")
     @classmethod
