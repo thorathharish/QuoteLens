@@ -135,7 +135,7 @@ export const NewQuotePanel = forwardRef<HTMLInputElement>(function NewQuotePanel
   const current = step === "details" ? (file ? 1 : 0) : 2;
 
   return (
-    <section aria-labelledby="new-quote-title" className="flex min-h-0 flex-1 flex-col">
+    <section aria-labelledby="new-quote-title" className="flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="flex items-center gap-3 border-b border-rule px-5 py-3.5">
         <span className="chip flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-mask">
           <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
