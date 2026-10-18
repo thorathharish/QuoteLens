@@ -97,3 +97,15 @@ def test_firestore_nested_arrays_round_trip() -> None:
     assert encoded["refdes"] == ["R1", "R2"]
     assert encoded["breaks"][0]["tiers"] == [{"_array": [1, 2]}]
     assert decode_nested_arrays(encoded) == doc
+
+
+def test_firestore_doc_ids_round_trip() -> None:
+    from app.infra.repositories.firestore import decode_doc_id, encode_doc_id
+
+    for original in ["24LC256-I/SN", "SS34-E3/57T", "100%/x", ".", "..", "__name__", "plain-ID_1"]:
+        stored = encode_doc_id(original)
+        assert "/" not in stored
+        assert stored not in (".", "..")
+        assert not (stored.startswith("__") and stored.endswith("__"))
+        assert decode_doc_id(stored) == original
+    assert encode_doc_id("plain-ID_1") == "plain-ID_1"  # ordinary ids are unchanged
