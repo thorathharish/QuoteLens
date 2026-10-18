@@ -100,6 +100,16 @@ def test_refdes_expansion() -> None:
         ("NXP/Nexperia", "Nexperia"),
         ("ON Semi", "onsemi"),
         ("Acme Widgets Ltd", "Acme Widgets Ltd"),
+        # Distributor spellings with a region, division or product line
+        ("Nexperia USA Inc.", "Nexperia"),
+        ("NXP USA Inc.", "NXP Semiconductors"),
+        ("Panasonic Industry", "Panasonic"),
+        ("TE Connectivity ALCOSWITCH Switches", "TE Connectivity"),
+        ("TE CONNECTIVITY - ALCOSWITCH", "TE Connectivity"),
+        ("Vishay General Semiconductor - Diodes Division", "Vishay"),
+        ("Vishay Semiconductors", "Vishay"),
+        ("Eaton - Electronics Division", "Eaton - Electronics Division"),
+        ("ST Ericsson", "ST Ericsson"),  # a two-letter alias never matches as a prefix
         ("", None),
     ],
 )

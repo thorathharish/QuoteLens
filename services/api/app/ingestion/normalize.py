@@ -84,7 +84,18 @@ def normalize_manufacturer(raw: str | None) -> str | None:
     """Canonical name for known manufacturers; otherwise the trimmed input (never guessed)."""
     if raw is None or not raw.strip():
         return None
-    return _MANUFACTURER_INDEX.get(_manufacturer_key(raw), " ".join(raw.split()))
+    key = _manufacturer_key(raw)
+    if key in _MANUFACTURER_INDEX:
+        return _MANUFACTURER_INDEX[key]
+    # Distributors add a region, division or product line after the maker's name ("Nexperia
+    # USA Inc.", "Panasonic Industry", "TE Connectivity ALCOSWITCH Switches"): the longest
+    # known name the key starts with wins. Two-letter aliases ("st", "te") must match whole.
+    words = key.split()
+    for n in range(len(words) - 1, 0, -1):
+        prefix = " ".join(words[:n])
+        if len(prefix.replace(" ", "")) >= 3 and prefix in _MANUFACTURER_INDEX:
+            return _MANUFACTURER_INDEX[prefix]
+    return " ".join(raw.split())
 
 
 # ── Quantity and unit of measure ─────────────────────────────

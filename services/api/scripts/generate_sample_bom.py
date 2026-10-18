@@ -70,11 +70,15 @@ _STEPS = [
         "German headers are mapped by AI.",
     ),
     ("3. Confirm the columns", "Check the mapping, then Confirm and analyze."),
-    ("4. Overview and Risks", "3 blockers stop the quote. Every risk explains why, with evidence."),
+    (
+        "4. Overview and Risks",
+        "Blockers stop the quote (F1 and J2 always; obsolete parts depend on the market). "
+        "Every risk explains why, with evidence.",
+    ),
     (
         "5. Fix the blockers",
-        "F1: enter a part number. J2: correct the quantity. Hall sensor U11-U13: Find "
-        "alternates and approve the drop-in.",
+        "F1: enter a part number. J2: correct the quantity. An obsolete part: Find "
+        "alternates and approve a drop-in, or waive it with a reason.",
     ),
     (
         "6. Cost impact",
@@ -84,7 +88,11 @@ _STEPS = [
     ("8. Quote", "Create a quote version, finalize it and download the Excel workbook."),
     ("", None),
     ("The Remarks column in the BOM sheet says what each interesting line demonstrates.", None),
-    ("Prices, stock and lifecycle come from the QuoteLens demo catalog (synthetic values).", None),
+    (
+        "Prices, stock and lifecycle are fetched live from DigiKey, Mouser and element14, "
+        "so remarks about the market may differ from today's data.",
+        None,
+    ),
 ]
 README: list[tuple[str, str | None]] = _STEPS
 
