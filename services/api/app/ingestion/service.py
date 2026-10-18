@@ -60,6 +60,10 @@ class IngestionService:
         grid = workbook.sheets[location.sheet]
         headers = grid[location.row_index]
         body = grid[location.row_index + 1 :]
+        if not any(any(row) for row in body):
+            raise ValidationFailedError(
+                f"The file has a header row (row {location.row_number}) but no BOM lines under it"
+            )
 
         sha256 = hashlib.sha256(data).hexdigest()
         mapping, warnings = await self._propose(

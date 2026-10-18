@@ -113,6 +113,11 @@ async def test_review_gate_moves_project_to_quote_ready(
         f"/api/v1/projects/{pid}/risks/{by_rule['D04']['id']}", json={"status": "WAIVED"}
     )
     assert no_note.status_code == 422
+    one_char = await api_client.patch(
+        f"/api/v1/projects/{pid}/risks/{by_rule['D04']['id']}",
+        json={"status": "WAIVED", "note": " x "},
+    )
+    assert one_char.status_code == 422
 
     fuse = next(x for x in lines.values() if x["refdes"] == ["F1"])
     fixed = await api_client.post(

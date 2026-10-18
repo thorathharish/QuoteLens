@@ -49,8 +49,11 @@ async def get_risk(pid: str, rid: str, container: ContainerDep) -> RiskDetail:
 async def review_risk(
     pid: str, rid: str, body: RiskReview, container: ContainerDep, role: DemoRoleDep
 ) -> Risk:
-    if body.status is RiskStatus.WAIVED and not (body.note and body.note.strip()):
-        raise ValidationFailedError("A note is required to waive a risk", {"field": "note"})
+    if body.status is RiskStatus.WAIVED and len((body.note or "").strip()) < 3:
+        raise ValidationFailedError(
+            "Say who accepted the risk and why (at least 3 characters) to waive it",
+            {"field": "note"},
+        )
     repos = container.repos
     ensure_not_busy(await repos.projects.get(pid))
     risk = await repos.risks(pid).get(rid)

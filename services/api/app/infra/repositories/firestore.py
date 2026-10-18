@@ -3,6 +3,10 @@
 Free-tier notes: writes are batched (max 500 per batch) and pagination uses
 `limit + 1` to detect further pages without an extra count query.
 
+Document ids may not contain "/" (it separates path segments), but ids built from part
+numbers often do (24LC256-I/SN). Ids are escaped on the way in and unescaped on the way out,
+so callers always see the original id.
+
 Firestore rejects arrays nested directly inside arrays (e.g. a spreadsheet preview grid),
 so inner arrays are wrapped in a one-key map on write and unwrapped on read. Callers see
 plain nested lists either way.
@@ -10,6 +14,7 @@ plain nested lists either way.
 
 from collections.abc import Mapping, Sequence
 from typing import Any
+from urllib.parse import unquote
 
 from google.cloud import firestore
 
@@ -22,11 +27,27 @@ from app.infra.repositories.base import (
 )
 
 _BATCH_LIMIT = 500
-_ARRAY_KEY = "__array__"
+# Not "__array__": Firestore reserves field names that start and end with "__".
+_ARRAY_KEY = "_array"
+
+
+def encode_doc_id(doc_id: str) -> str:
+    """Escape what Firestore forbids in a document id: '/', the ids '.' and '..', and __x__."""
+    escaped = doc_id.replace("%", "%25").replace("/", "%2F")
+    if escaped in (".", ".."):
+        escaped = escaped.replace(".", "%2E")
+    if escaped.startswith("__") and escaped.endswith("__"):
+        escaped = "%5F" + escaped[1:]
+    return escaped
+
+
+def decode_doc_id(stored: str) -> str:
+    """Inverse of encode_doc_id."""
+    return unquote(stored)
 
 
 def encode_nested_arrays(value: Any, inside_array: bool = False) -> Any:
-    """Wrap each array that sits directly inside an array: [[1]] becomes [{"__array__": [1]}]."""
+    """Wrap each array that sits directly inside an array: [[1]] becomes [{"_array": [1]}]."""
     if isinstance(value, dict):
         return {k: encode_nested_arrays(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
@@ -60,11 +81,12 @@ class FirestoreDocumentStore:
         return self._client.collection(*path)
 
     async def get(self, collection: CollectionPath, doc_id: str) -> Document | None:
-        snapshot = await self._collection(collection).document(doc_id).get()
+        snapshot = await self._collection(collection).document(encode_doc_id(doc_id)).get()
         return decode_nested_arrays(snapshot.to_dict()) if snapshot.exists else None
 
     async def set(self, collection: CollectionPath, doc_id: str, data: Document) -> None:
-        await self._collection(collection).document(doc_id).set(encode_nested_arrays(data))
+        doc = self._collection(collection).document(encode_doc_id(doc_id))
+        await doc.set(encode_nested_arrays(data))
 
     async def set_many(self, collection: CollectionPath, docs: Mapping[str, Document]) -> None:
         coll = self._collection(collection)
@@ -72,11 +94,13 @@ class FirestoreDocumentStore:
         for start in range(0, len(items), _BATCH_LIMIT):
             batch = self._client.batch()
             for doc_id, data in items[start : start + _BATCH_LIMIT]:
-                batch.set(coll.document(doc_id), encode_nested_arrays(data))
+                batch.set(coll.document(encode_doc_id(doc_id)), encode_nested_arrays(data))
             await batch.commit()
 
     async def delete(self, collection: CollectionPath, doc_id: str) -> None:
-        await self._client.recursive_delete(self._collection(collection).document(doc_id))
+        await self._client.recursive_delete(
+            self._collection(collection).document(encode_doc_id(doc_id))
+        )
 
     async def query(
         self,
@@ -102,7 +126,7 @@ class FirestoreDocumentStore:
         # would need a composite index for every descending listing.
         query = query.order_by("__name__", direction=direction)
         if cursor is not None:
-            cursor_snapshot = await coll.document(cursor).get()
+            cursor_snapshot = await coll.document(encode_doc_id(cursor)).get()
             if cursor_snapshot.exists:
                 query = query.start_after(cursor_snapshot)
 
@@ -110,8 +134,8 @@ class FirestoreDocumentStore:
         has_more = len(snapshots) > limit
         page = snapshots[:limit]
         return QueryResult(
-            docs=[(s.id, decode_nested_arrays(s.to_dict())) for s in page],
-            next_cursor=page[-1].id if has_more and page else None,
+            docs=[(decode_doc_id(s.id), decode_nested_arrays(s.to_dict())) for s in page],
+            next_cursor=decode_doc_id(page[-1].id) if has_more and page else None,
         )
 
     async def ping(self) -> None:

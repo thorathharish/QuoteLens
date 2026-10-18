@@ -5,7 +5,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.catalog.rows import CatalogComponent, CatalogOffer
 from app.demo.service import Scenario
@@ -35,14 +35,27 @@ class ApiModel(BaseModel):
 
 
 class ProjectCreate(ApiModel):
-    name: str = Field(min_length=1, max_length=120)
-    customer: str | None = Field(default=None, max_length=120)
-    currency: str = Field(default="USD", pattern="^[A-Z]{3}$")
+    # Surrounding whitespace is trimmed first, so a name of only spaces is rejected.
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    customer: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] | None = None
+    currency: Literal["USD", "EUR", "GBP", "INR", "JPY", "CNY", "SGD", "AUD", "CAD"] = "USD"
     build_quantities: list[Annotated[int, Field(ge=1, le=1_000_000)]] = Field(
         min_length=1, max_length=5
     )
     target_ship_date: date | None = None
     data_mode: DataMode = DataMode.CACHE_FIRST
+
+    @field_validator("customer")
+    @classmethod
+    def _blank_customer_is_none(cls, value: str | None) -> str | None:
+        return value or None
+
+    @field_validator("build_quantities")
+    @classmethod
+    def _distinct_quantities(cls, value: list[int]) -> list[int]:
+        if len(set(value)) != len(value):
+            raise ValueError("Build quantities must be different from each other")
+        return value
 
 
 class ProjectPage(ApiModel):
