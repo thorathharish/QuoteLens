@@ -172,8 +172,19 @@ async def test_obsolete_part_drop_in_approval_clears_the_blocker(
     # Re-investigating keeps the decision
     (again,) = await _investigate(api_client, container, pid, hall["id"])
     assert again["status"] == "APPROVED"
-    actions = {e.action for e in await container.repos.audit(pid).all()}
-    assert "ALTERNATE_APPROVED" in actions
+    actions = [e.action for e in await container.repos.audit(pid).all()]
+    assert actions.count("ALTERNATE_APPROVED") == 1
+
+    # A decision is recorded once: a double click neither re-applies it nor duplicates the audit.
+    for decision in ("APPROVE", "REJECT"):
+        repeat = await api_client.post(
+            f"/api/v1/projects/{pid}/alternatives/{alt['id']}/decision",
+            json={"decision": decision, "note": "second click"},
+        )
+        assert repeat.status_code == 409, decision
+    actions = [e.action for e in await container.repos.audit(pid).all()]
+    assert actions.count("ALTERNATE_APPROVED") == 1
+    assert "ALTERNATE_REJECTED" not in actions
 
 
 async def test_unsuitable_candidates_cannot_be_approved(
@@ -200,6 +211,11 @@ async def test_unsuitable_candidates_cannot_be_approved(
         json={"decision": "REJECT", "note": "Gain change breaks the shunt design"},
     )
     assert rejected.json()["alternative"]["status"] == "REJECTED"
+    rejected_again = await api_client.post(
+        f"/api/v1/projects/{pid}/alternatives/{alt['id']}/decision",
+        json={"decision": "REJECT", "note": "second click"},
+    )
+    assert rejected_again.status_code == 409
 
 
 async def test_functional_alternates_and_parts_without_crossrefs(
