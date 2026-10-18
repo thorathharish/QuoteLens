@@ -91,8 +91,8 @@ function LineDetailBody({ projectId, lineId, onAsk }: { projectId: string; lineI
         </ul>
       )}
 
-      {notFound && (
-        <MpnFix projectId={projectId} lineId={line.id} candidates={line.match?.candidates ?? []} />
+      {(notFound || !line.mpn) && (
+        <MpnFix projectId={projectId} lineId={line.id} candidates={line.match?.candidates ?? []} missing={!line.mpn} />
       )}
 
       {recommendation && (
@@ -269,7 +269,18 @@ function OffersTable({
   );
 }
 
-function MpnFix({ projectId, lineId, candidates }: { projectId: string; lineId: string; candidates: string[] }) {
+/** Enter or correct the part number: for a part number that was not found, or a line with none. */
+function MpnFix({
+  projectId,
+  lineId,
+  candidates,
+  missing = false,
+}: {
+  projectId: string;
+  lineId: string;
+  candidates: string[];
+  missing?: boolean;
+}) {
   const invalidate = useInvalidateProject(projectId);
   const [mpn, setMpn] = useState(candidates[0] ?? "");
   const [reason, setReason] = useState(candidates.length ? "Accepted the suggested part number" : "");
@@ -285,7 +296,12 @@ function MpnFix({ projectId, lineId, candidates }: { projectId: string; lineId: 
   });
   return (
     <section className="rounded-md bg-high-tint p-3">
-      <h3 className="font-semibold text-high">This part number was not found</h3>
+      <h3 className="font-semibold text-high">
+        {missing ? "This line has no part number" : "This part number was not found"}
+      </h3>
+      {missing && (
+        <p className="mt-1 text-sm">Enter the manufacturer part number to source and price this line.</p>
+      )}
       {candidates.length > 0 && (
         <p className="mt-1 text-sm">
           Closest known: {candidates.map((c) => <span key={c} className="code mr-2">{c}</span>)}

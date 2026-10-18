@@ -52,7 +52,16 @@ def read_bom_file(filename: str, data: bytes, max_bytes: int) -> Workbook:
     )
 
 
+_OLE_MAGIC = bytes.fromhex("D0CF11E0A1B11AE1")
+
+
 def _read_xlsx(data: bytes) -> Workbook:
+    if data.startswith(_OLE_MAGIC):
+        raise UnsupportedFileError(
+            "This workbook is password-protected (or saved in the old Excel format). Open it in "
+            "Excel, remove the password under File > Info > Protect Workbook, save as .xlsx and "
+            "upload it again."
+        )
     if not data.startswith(_XLSX_MAGIC):
         raise UnsupportedFileError("File has an .xlsx extension but is not an Excel workbook")
     try:
