@@ -35,7 +35,11 @@ export const NewQuotePanel = forwardRef<HTMLInputElement>(function NewQuotePanel
     .split(/[,\s]+/)
     .filter(Boolean)
     .map(Number);
-  const volumesValid = volumes.length > 0 && volumes.length <= 5 && volumes.every((v) => Number.isInteger(v) && v > 0);
+  const volumesValid =
+    volumes.length > 0 &&
+    volumes.length <= 5 &&
+    new Set(volumes).size === volumes.length &&
+    volumes.every((v) => Number.isInteger(v) && v > 0 && v <= 1_000_000);
 
   const pick = (candidate: File | undefined) => {
     if (!candidate) return;
@@ -156,7 +160,7 @@ export const NewQuotePanel = forwardRef<HTMLInputElement>(function NewQuotePanel
             <Field label="Customer" value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} disabled={projectId !== null} />
             <Field
               label="Build quantities"
-              hint={volumesValid ? "Up to five, comma separated. The first one drives recommendations." : "Enter one to five whole numbers, e.g. 100, 1000, 5000."}
+              hint={volumesValid ? "Up to five, comma separated. The first one drives recommendations." : "Enter one to five different whole numbers up to 1,000,000, e.g. 100, 1000, 5000."}
               value={form.volumes}
               onChange={(e) => setForm({ ...form, volumes: e.target.value })}
               aria-invalid={!volumesValid}

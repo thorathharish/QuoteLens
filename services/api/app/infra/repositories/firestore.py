@@ -22,11 +22,12 @@ from app.infra.repositories.base import (
 )
 
 _BATCH_LIMIT = 500
-_ARRAY_KEY = "__array__"
+# Not "__array__": Firestore reserves field names that start and end with "__".
+_ARRAY_KEY = "_array"
 
 
 def encode_nested_arrays(value: Any, inside_array: bool = False) -> Any:
-    """Wrap each array that sits directly inside an array: [[1]] becomes [{"__array__": [1]}]."""
+    """Wrap each array that sits directly inside an array: [[1]] becomes [{"_array": [1]}]."""
     if isinstance(value, dict):
         return {k: encode_nested_arrays(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):

@@ -97,3 +97,20 @@ async def test_worker_requires_token_when_oidc_enabled() -> None:
         )
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "UNAUTHENTICATED"
+
+
+async def test_project_create_rejects_blank_names_and_duplicate_volumes(
+    api_client: AsyncClient,
+) -> None:
+    for body in (
+        {"name": "   ", "build_quantities": [100]},
+        {"name": "Board", "build_quantities": [100, 100]},
+    ):
+        response = await api_client.post("/api/v1/projects", json=body)
+        assert response.status_code == 422, body
+    ok = await api_client.post(
+        "/api/v1/projects", json={"name": "  Board  ", "customer": "  ", "build_quantities": [100]}
+    )
+    assert ok.status_code == 201
+    assert ok.json()["name"] == "Board"
+    assert ok.json()["customer"] is None

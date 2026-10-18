@@ -91,9 +91,9 @@ def test_firestore_nested_arrays_round_trip() -> None:
     encoded = encode_nested_arrays(doc)
     # No array may sit directly inside another array once encoded.
     assert encoded["preview_rows"] == [
-        {"__array__": ["U1", "1", None]},
-        {"__array__": ["U2", "2", "Bosch"]},
+        {"_array": ["U1", "1", None]},
+        {"_array": ["U2", "2", "Bosch"]},
     ]
     assert encoded["refdes"] == ["R1", "R2"]
-    assert encoded["breaks"][0]["tiers"] == [{"__array__": [1, 2]}]
+    assert encoded["breaks"][0]["tiers"] == [{"_array": [1, 2]}]
     assert decode_nested_arrays(encoded) == doc
