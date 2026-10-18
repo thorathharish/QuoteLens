@@ -15,6 +15,14 @@ type Step = "details" | "columns";
 const STEPS = ["Details", "BOM", "Columns", "Analysis"] as const;
 const ACCEPT = ".xlsx,.csv,.tsv";
 const MAX_BYTES = 5 * 1024 * 1024;
+const SAMPLE_URL = "/samples/QuoteLens-sample-BOM.xlsx";
+const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+/** A target ship date about 8 weeks out, so lead-time risks show up for the sample. */
+function eightWeeksFromToday(): string {
+  const date = new Date(Date.now() + 56 * 24 * 60 * 60 * 1000);
+  return date.toISOString().slice(0, 10);
+}
 
 /**
  * Start a quote without leaving the projects page: project details and the customer BOM
@@ -49,6 +57,25 @@ export const NewQuotePanel = forwardRef<HTMLInputElement>(function NewQuotePanel
     setFileError(null);
     setFile(candidate);
   };
+
+  // No BOM handy (e.g. a hackathon judge): load the sample that exercises every feature, and
+  // fill only the fields the user left empty.
+  const sample = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(SAMPLE_URL);
+      if (!response.ok) throw new Error("The sample BOM could not be loaded");
+      return new File([await response.blob()], "QuoteLens-sample-BOM.xlsx", { type: XLSX_TYPE });
+    },
+    onSuccess: (sampleFile) => {
+      pick(sampleFile);
+      setForm((f) => ({
+        ...f,
+        name: f.name || "MC48 motor controller (sample)",
+        customer: f.customer || "Northwind Drives",
+        target: f.target || eightWeeksFromToday(),
+      }));
+    },
+  });
 
   // Create the project once, then upload; a failed upload keeps the project so the user
   // can pick another file without creating a duplicate.
@@ -188,6 +215,23 @@ export const NewQuotePanel = forwardRef<HTMLInputElement>(function NewQuotePanel
             </label>
 
             <DropZone file={file} onPick={pick} />
+            {!projectId && (
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-md bg-gold-tint px-3 py-2.5">
+                <p className="text-sm text-ink-2">
+                  <span className="font-semibold text-ink">No BOM handy?</span> Use our sample: it exercises every
+                  feature.
+                </p>
+                <span className="flex items-center gap-3">
+                  <Button type="button" variant="secondary" onClick={() => sample.mutate()} disabled={sample.isPending}>
+                    {sample.isPending ? "Loading…" : "Use the sample BOM"}
+                  </Button>
+                  <a href={SAMPLE_URL} download className="text-xs font-semibold text-mask hover:underline">
+                    Download
+                  </a>
+                </span>
+              </div>
+            )}
+            <ErrorNote error={sample.error} />
             {fileError && <ErrorNote error={fileError} />}
             {projectId && !start.isPending && (
               <p className="text-xs text-ink-3">The project is created. Choose another file to try the upload again.</p>
